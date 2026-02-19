@@ -6,22 +6,21 @@ const TAGS = [
   "motivated", "angry", "overwhelmed", "focused", "lonely", "confident"
 ];
 
-export default function MoodCheckIn() {
+export default function MoodCheckIn({ initialNote = "" }) {
   const [rating, setRating] = useState(7);
   const [selected, setSelected] = useState([]);
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-
   const [days, setDays] = useState(7);
   const [entries, setEntries] = useState([]);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   function toggle(tag) {
-    setSelected((prev) => (
+    setSelected((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    ));
+    );
   }
 
   async function refresh() {
@@ -31,8 +30,13 @@ export default function MoodCheckIn() {
 
   useEffect(() => {
     refresh().catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
+
+  useEffect(() => {
+    if (initialNote && initialNote.trim()) {
+      setNote(initialNote.slice(0, 280));
+    }
+  }, [initialNote]);
 
   async function submit(e) {
     e.preventDefault();
