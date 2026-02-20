@@ -27,6 +27,19 @@ export default function App() {
       });
   }, []);
 
+  useEffect(() => {
+    const tabNames = {
+      mood: "Mood Check-In",
+      journal: "Journal",
+      history: "Mood History",
+    };
+    if (isAuthed) {
+      document.title = `${tabNames[authedPage] ?? "Home"} | MindSync`;
+    } else {
+      document.title = `${page === "register" ? "Register" : "Login"} | MindSync`;
+    }
+  }, [isAuthed, authedPage, page]);
+
   async function handleLogout() {
     await logoutUser();
     setIsAuthed(false);
