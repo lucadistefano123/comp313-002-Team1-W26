@@ -1,0 +1,12 @@
+{
+  "name": "mindsync-auth-root",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm --prefix client run build -- --watch\" \"npm --prefix server run dev\"",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

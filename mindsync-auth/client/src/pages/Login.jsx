@@ -57,7 +57,7 @@ export default function Login({ onAuthed }) {
 
           {/* ✅ no inline button styling so it follows your wellness theme */}
           <button type="submit">Login</button>
-          <button type="button" onClick={doLogout}>Logout</button>
+          
         </form>
 
         {msg && <p style={styles.ok}>{msg}</p>}
