@@ -54,15 +54,19 @@ export default function MoodHistoryChart() {
       <div style={styles.card}>
         <div style={styles.topRow}>
           <h2 style={styles.h2}>Mood History</h2>
-          <select
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-            style={styles.select}
-            aria-label="Select time range"
-          >
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label htmlFor="history-range" style={styles.filterLabel}>Time range</label>
+            <select
+              id="history-range"
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              style={styles.select}
+              aria-label="Select time range"
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+            </select>
+          </div>
         </div>
 
         {!hasData ? (
@@ -130,8 +134,9 @@ const styles = {
     backdropFilter: "blur(10px)",
     boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
   },
-  topRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  topRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 20 },
   h2: { margin: 0, fontSize: 26 },
+  filterLabel: { fontSize: 13, opacity: 0.7, whiteSpace: "nowrap" },
   select: {
     padding: "8px 10px",
     borderRadius: 12,
