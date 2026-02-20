@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createMoodEntry, getMoodEntries, getMoodHistory } from "../api/moodApi";
-import MoodHistoryChart from "./MoodHistoryChart";
+import { createMoodEntry, getMoodEntries } from "../api/moodApi";
 
 const TAGS = [
   "stressed", "anxious", "calm", "happy", "sad", "tired",
@@ -15,7 +14,6 @@ export default function MoodCheckIn({ initialNote = "" }) {
   const [err, setErr] = useState("");
   const [days, setDays] = useState(7);
   const [entries, setEntries] = useState([]);
-  const [history, setHistory] = useState([]);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
@@ -26,12 +24,8 @@ export default function MoodCheckIn({ initialNote = "" }) {
   }
 
   async function refresh() {
-    const [entriesData, historyData] = await Promise.all([
-      getMoodEntries(days),
-      getMoodHistory(days),
-    ]);
-    setEntries(entriesData.entries || []);
-    setHistory(historyData.history || []);
+    const data = await getMoodEntries(days);
+    setEntries(data.entries || []);
   }
 
   useEffect(() => {
@@ -121,19 +115,11 @@ export default function MoodCheckIn({ initialNote = "" }) {
         <div style={styles.divider} />
 
         <div style={styles.historyTop}>
-          <h3 style={styles.h3}>Mood History</h3>
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={styles.select} aria-label="Select time range">
+          <h3 style={styles.h3}>Recent entries</h3>
+          <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={styles.select}>
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
           </select>
-        </div>
-
-        <MoodHistoryChart data={history} days={days} />
-
-        <div style={styles.divider} />
-
-        <div style={styles.historyTop}>
-          <h3 style={styles.h3}>Recent entries</h3>
         </div>
 
         {entries.length === 0 ? (

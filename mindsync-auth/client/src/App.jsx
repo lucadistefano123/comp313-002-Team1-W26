@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MoodCheckIn from "./pages/MoodCheckIn";
 import Journal from "./pages/Journal";
+import MoodHistoryChart from "./pages/MoodHistoryChart";
 import { logoutUser, me } from "./api/authApi";
 
 export default function App() {
@@ -79,6 +80,12 @@ export default function App() {
             >
               Journal
             </button>
+            <button
+              onClick={() => setAuthedPage("history")}
+              style={authedPage === "history" ? styles.authedBtnOn : styles.authedBtn}
+            >
+              Mood History
+            </button>
           </div>
         ) : null}
       </header>
@@ -86,6 +93,8 @@ export default function App() {
       {isAuthed ? (
         authedPage === "mood" ? (
           <MoodCheckIn initialNote={moodPrefill} />
+        ) : authedPage === "history" ? (
+          <MoodHistoryChart />
         ) : (
           <Journal
             onSendToMood={(text) => {
