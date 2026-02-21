@@ -6,6 +6,21 @@ const TAGS = [
   "motivated", "angry", "overwhelmed", "focused", "lonely", "confident"
 ];
 
+const TAG_EMOJI = {
+  stressed:    "😤",
+  anxious:     "😰",
+  calm:        "😌",
+  happy:       "😊",
+  sad:         "😢",
+  tired:       "😴",
+  motivated:   "💪",
+  angry:       "😠",
+  overwhelmed: "🤯",
+  focused:     "🎯",
+  lonely:      "🥺",
+  confident:   "😎",
+};
+
 export default function MoodCheckIn({ initialNote = "" }) {
   const [rating, setRating] = useState(7);
   const [selected, setSelected] = useState([]);
@@ -88,7 +103,7 @@ export default function MoodCheckIn({ initialNote = "" }) {
                       ...(on ? styles.tagOn : null)
                     }}
                   >
-                    {t}
+                    {TAG_EMOJI[t]} {t}
                   </button>
                 );
               })}
