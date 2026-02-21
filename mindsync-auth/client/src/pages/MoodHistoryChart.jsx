@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function MoodHistoryChart() {
+export default function MoodHistoryChart({ onExport }) {
   const [days, setDays] = useState(7);
   const [data, setData] = useState([]);
 
@@ -117,6 +117,25 @@ export default function MoodHistoryChart() {
             </ResponsiveContainer>
           </div>
         )}
+
+        {onExport && (
+          <>
+            <div style={styles.divider} />
+            <div style={styles.exportSection}>
+              <div>
+                <h3 style={styles.exportHeading}>Export Your Data</h3>
+                <p style={styles.exportDesc}>
+                  Download your mood history to share with a clinician or keep for your own records.
+                  Includes ratings, tags, and journal notes.
+                </p>
+              </div>
+              <div style={styles.exportRow}>
+                <button onClick={() => onExport("csv")}>Export CSV</button>
+                <button onClick={() => onExport("pdf")}>Export PDF</button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -153,6 +172,22 @@ const styles = {
     fontSize: 15,
     borderRadius: 12,
     border: "1px dashed rgba(255,255,255,0.14)",
+  },
+  divider: { height: 1, background: "rgba(255,255,255,0.10)", margin: "20px 0 0" },
+  exportSection: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: 16,
+    flexWrap: "wrap",
+    paddingTop: 16,
+  },
+  exportHeading: { margin: 0, fontSize: 16, fontWeight: 700 },
+  exportDesc: { margin: "6px 0 0", fontSize: 13, opacity: 0.65, maxWidth: 380 },
+  exportRow: {
+    display: "flex",
+    gap: 10,
+    flexShrink: 0,
   },
 };
 

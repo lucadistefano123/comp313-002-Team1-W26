@@ -137,13 +137,7 @@ export default function App() {
               Mood History
             </button>
 
-            {/* EXPORT */}
-            <button onClick={() => handleExport("csv")} style={styles.authedBtn}>
-  Export CSV
-</button>
-<button onClick={() => handleExport("pdf")} style={styles.authedBtn}>
-  Export PDF
-</button>
+
           </div>
         ) : null}
       </header>
@@ -152,7 +146,7 @@ export default function App() {
         authedPage === "mood" ? (
           <MoodCheckIn initialNote={moodPrefill} />
         ) : authedPage === "history" ? (
-          <MoodHistoryChart />
+          <MoodHistoryChart onExport={handleExport} />
         ) : (
           <Journal
             onSendToMood={(text) => {
