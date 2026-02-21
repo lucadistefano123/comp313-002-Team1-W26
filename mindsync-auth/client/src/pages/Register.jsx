@@ -58,7 +58,7 @@ export default function Register({ onAuthed }) {
           />
 
           {/* ✅ no inline button styling so it follows your wellness theme */}
-          <button type="submit">Registe</button>
+          <button type="submit">Register</button>
         </form>
 
         {msg && <p style={styles.ok}>{msg}</p>}
