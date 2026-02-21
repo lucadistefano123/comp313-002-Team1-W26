@@ -29,7 +29,10 @@ export default function Journal({ onSendToMood }) {
 
         <div style={styles.field}>
           <div style={styles.row}>
-            <div style={styles.label}>Entry (max {MAX_JOURNAL} chars)</div>
+            <h3 style={styles.sectionHead}>
+              Your Entry
+              <span style={styles.sectionSub}>(max {MAX_JOURNAL} chars)</span>
+            </h3>
             <div style={styles.counter}>{remaining} left</div>
           </div>
 
@@ -68,6 +71,8 @@ const styles = {
   field: { marginTop: 14 },
   row: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   label: { fontWeight: 600, opacity: 0.9 },
+  sectionHead: { margin: 0, fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 },
+  sectionSub: { fontSize: 12, fontWeight: 400, opacity: 0.55 },
   counter: { fontSize: 12, opacity: 0.75 },
   textarea: {
     marginTop: 10,

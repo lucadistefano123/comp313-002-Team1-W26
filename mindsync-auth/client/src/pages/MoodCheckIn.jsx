@@ -77,7 +77,10 @@ export default function MoodCheckIn({ initialNote = "" }) {
 
         <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           <div style={styles.row}>
-            <label style={styles.label}>Mood rating: <b>{rating}</b>/10</label>
+            <label style={styles.sectionHead}>
+              Mood Rating
+              <span style={styles.ratingBadge}>{rating}<span style={styles.ratingOut}>/10</span></span>
+            </label>
             <input
               type="range"
               min="1"
@@ -89,7 +92,7 @@ export default function MoodCheckIn({ initialNote = "" }) {
           </div>
 
           <div>
-            <div style={styles.label}>Emotion tags</div>
+            <h3 style={styles.sectionHead}>Emotion Tags</h3>
             <div style={styles.tagWrap}>
               {TAGS.map((t) => {
                 const on = selectedSet.has(t);
@@ -111,7 +114,7 @@ export default function MoodCheckIn({ initialNote = "" }) {
           </div>
 
           <div>
-            <div style={styles.label}>Optional note (max 280)</div>
+            <h3 style={styles.sectionHead}>Optional Note <span style={styles.sectionSub}>(max 280 chars)</span></h3>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -187,6 +190,10 @@ const styles = {
   p: { opacity: 0.85, marginTop: 8 },
   row: { display: "grid", gap: 8 },
   label: { fontSize: 13, opacity: 0.85 },
+  sectionHead: { margin: "14px 0 4px", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 10 },
+  sectionSub: { fontSize: 12, fontWeight: 400, opacity: 0.55 },
+  ratingBadge: { fontSize: 22, fontWeight: 800, color: "#c084fc" },
+  ratingOut: { fontSize: 14, fontWeight: 400, opacity: 0.6 },
   tagWrap: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 },
   tag: {
     padding: "8px 10px",
