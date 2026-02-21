@@ -41,6 +41,41 @@ export default function App() {
     setAuthedPage("mood");
   }
 
+  // ✅ EXPORT FUNCTION
+  async function handleExport(format = "csv") {
+    try {
+      const res = await fetch(`http://localhost:5000/api/export?format=${format}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        let msg = "Export failed.";
+        try {
+          const data = await res.json();
+          msg = data.message || msg;
+        } catch {}
+        alert(msg);
+        return;
+      }
+
+      const blob = await res.blob();
+      const ext = format === "pdf" ? "pdf" : "csv";
+      const filename = `mindsync-export-${new Date().toISOString().slice(0, 10)}.${ext}`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e?.message || "Export failed.");
+    }
+  }
+
   return (
     <div style={styles.app}>
       <header style={styles.header}>
@@ -65,6 +100,7 @@ export default function App() {
           )}
         </div>
 
+        {/* ✅ AUTHED NAV WITH EXPORT BUTTON */}
         {isAuthed ? (
           <div style={styles.authedNav}>
             <button
@@ -73,12 +109,21 @@ export default function App() {
             >
               Mood Check-In
             </button>
+
             <button
               onClick={() => setAuthedPage("journal")}
               style={authedPage === "journal" ? styles.authedBtnOn : styles.authedBtn}
             >
               Journal
             </button>
+
+            {/* EXPORT */}
+            <button onClick={() => handleExport("csv")} style={styles.authedBtn}>
+  Export CSV
+</button>
+<button onClick={() => handleExport("pdf")} style={styles.authedBtn}>
+  Export PDF
+</button>
           </div>
         ) : null}
       </header>
