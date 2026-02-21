@@ -22,3 +22,13 @@ export async function getMoodEntries(days = 7) {
   if (!res.ok) throw new Error(data?.message || "Failed to load mood entries");
   return data;
 }
+
+export async function getMoodHistory(days = 7) {
+  const res = await fetch(`${API_BASE}/moods/history?days=${days}`, {
+    credentials: "include",
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed to load mood history");
+  return data;
+}

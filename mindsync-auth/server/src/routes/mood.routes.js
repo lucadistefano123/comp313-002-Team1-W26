@@ -81,4 +81,55 @@ router.get(
   }
 );
 
+// GET /api/moods/history?days=7|30  (aggregated daily averages for chart)
+router.get(
+  "/history",
+  requireAuth,
+  [
+    query("days").optional().isInt({ min: 1, max: 365 }).withMessage("days must be 1–365"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const days = req.query.days ? parseInt(req.query.days, 10) : 7;
+
+    const from = new Date();
+    from.setDate(from.getDate() - (days - 1));
+    const fromStart = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+
+    // Group by calendar day, compute average rating per day
+    const agg = await MoodEntry.aggregate([
+      {
+        $match: {
+          userId: req.user.id,
+          entryDate: { $gte: fromStart },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$entryDate" } },
+          avg: { $avg: "$rating" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Build full date range so missing days appear as null (not skipped)
+    const map = {};
+    agg.forEach((d) => { map[d._id] = Math.round(d.avg * 10) / 10; });
+
+    const result = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(fromStart);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      result.push({ date: key, avg: map[key] ?? null });
+    }
+
+    res.json({ history: result });
+  }
+);
+
 module.exports = router;

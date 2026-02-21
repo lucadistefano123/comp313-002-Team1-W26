@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MoodCheckIn from "./pages/MoodCheckIn";
 import Journal from "./pages/Journal";
+import MoodHistoryChart from "./pages/MoodHistoryChart";
 import { logoutUser, me } from "./api/authApi";
 
 export default function App() {
@@ -25,6 +26,19 @@ export default function App() {
         setCurrentUser(null);
       });
   }, []);
+
+  useEffect(() => {
+    const tabNames = {
+      mood: "Mood Check-In",
+      journal: "Journal",
+      history: "Mood History",
+    };
+    if (isAuthed) {
+      document.title = `${tabNames[authedPage] ?? "Home"} | MindSync`;
+    } else {
+      document.title = `${page === "register" ? "Register" : "Login"} | MindSync`;
+    }
+  }, [isAuthed, authedPage, page]);
 
   async function handleLogout() {
     await logoutUser();
@@ -116,6 +130,12 @@ export default function App() {
             >
               Journal
             </button>
+            <button
+              onClick={() => setAuthedPage("history")}
+              style={authedPage === "history" ? styles.authedBtnOn : styles.authedBtn}
+            >
+              Mood History
+            </button>
 
             {/* EXPORT */}
             <button onClick={() => handleExport("csv")} style={styles.authedBtn}>
@@ -131,6 +151,8 @@ export default function App() {
       {isAuthed ? (
         authedPage === "mood" ? (
           <MoodCheckIn initialNote={moodPrefill} />
+        ) : authedPage === "history" ? (
+          <MoodHistoryChart />
         ) : (
           <Journal
             onSendToMood={(text) => {
