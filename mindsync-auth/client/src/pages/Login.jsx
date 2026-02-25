@@ -1,13 +1,24 @@
 import { useState } from "react";
-import { loginUser, logoutUser } from "../api/authApi";
+import { loginUser, logoutUser, registerUser } from "../api/authApi";
 
 export default function Login({ onAuthed }) {
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [mode, setMode] = useState("login"); // login | register
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    isAdmin: false
+  });
+
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   function update(e) {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+    const { name, value, type, checked } = e.target;
+    setForm((f) => ({
+      ...f,
+      [name]: type === "checkbox" ? checked : value
+    }));
   }
 
   async function onSubmit(e) {
@@ -16,9 +27,32 @@ export default function Login({ onAuthed }) {
     setErr("");
 
     try {
-      const data = await loginUser(form);
-      setMsg(`✅ Logged in as ${data.user.fullName} (${data.user.role})`);
-      onAuthed?.(data.user); // ✅ tell App we are logged in
+      // ===============================
+      // LOGIN
+      // ===============================
+      if (mode === "login") {
+        const data = await loginUser({
+          email: form.email,
+          password: form.password
+        });
+
+        setMsg(`✅ Logged in as ${data.user.fullName} (${data.user.role})`);
+        onAuthed?.(data.user);
+      }
+
+      // ===============================
+      // REGISTER
+      // ===============================
+      else {
+        const data = await registerUser({
+          fullName: form.fullName,
+          email: form.email,
+          password: form.password,
+          role: form.isAdmin ? "admin" : "user"
+        });
+
+        setMsg(`✅ Registered as ${data.user.fullName} (${data.user.role})`);
+      }
     } catch (e2) {
       setErr(`❌ ${e2.message}`);
     }
@@ -34,9 +68,23 @@ export default function Login({ onAuthed }) {
   return (
     <div style={styles.shell}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Login</h2>
+        <h2 style={styles.title}>
+          {mode === "login" ? "Login" : "Register"}
+        </h2>
 
         <form onSubmit={onSubmit} style={styles.form}>
+
+          {mode === "register" && (
+            <input
+              style={styles.input}
+              name="fullName"
+              placeholder="Full Name"
+              value={form.fullName}
+              onChange={update}
+              required
+            />
+          )}
+
           <input
             style={styles.input}
             name="email"
@@ -45,20 +93,50 @@ export default function Login({ onAuthed }) {
             onChange={update}
             required
           />
+
           <input
             style={styles.input}
             name="password"
-            placeholder="Password"
             type="password"
+            placeholder="Password"
             value={form.password}
             onChange={update}
             required
           />
 
-          {/* ✅ no inline button styling so it follows your wellness theme */}
-          <button type="submit">Login</button>
-          
+          {/* ADMIN CHECKBOX (REGISTER ONLY) */}
+          {mode === "register" && (
+            <label style={{ fontSize: 14 }}>
+              <input
+                type="checkbox"
+                name="isAdmin"
+                checked={form.isAdmin}
+                onChange={update}
+              />
+              {" "}Register as Admin
+            </label>
+          )}
+
+          <button type="submit">
+            {mode === "login" ? "Login" : "Register"}
+          </button>
         </form>
+
+        {/* SWITCH MODE */}
+        <button
+          onClick={() =>
+            setMode(mode === "login" ? "register" : "login")
+          }
+          style={{ marginTop: 10 }}
+        >
+          {mode === "login"
+            ? "Create admin account"
+            : "Already have account? Login"}
+        </button>
+
+        <button onClick={doLogout} style={{ marginTop: 6 }}>
+          Logout
+        </button>
 
         {msg && <p style={styles.ok}>{msg}</p>}
         {err && <p style={styles.bad}>{err}</p>}

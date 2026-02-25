@@ -1,18 +1,17 @@
 const API_BASE = "/api";
 
-export async function registerUser({ fullName, email, password }) {
+export async function registerUser({ fullName, email, password, role }) {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ fullName, email, password }),
+    body: JSON.stringify({ fullName, email, password, role }),
   });
 
   const data = await res.json();
   if (!res.ok) throw new Error(data?.message || "Register failed");
   return data;
 }
-
 export async function loginUser({ email, password }) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",

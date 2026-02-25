@@ -5,60 +5,68 @@ import MoodCheckIn from "./pages/MoodCheckIn";
 import Journal from "./pages/Journal";
 import MoodHistoryChart from "./pages/MoodHistoryChart";
 import { logoutUser, me } from "./api/authApi";
+import AdminDashboard from "./pages/AdminDashboard";
+import { getFlags } from "./api/flagsApi";
 
 export default function App() {
   const [page, setPage] = useState("login");
   const [isAuthed, setIsAuthed] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-
   const [authedPage, setAuthedPage] = useState("mood");
   const [moodPrefill, setMoodPrefill] = useState("");
 
+  const [flags, setFlags] = useState({}); // key -> boolean
+  const isAdmin = currentUser?.role === "admin";
+
+  async function loadFlags() {
+    const arr = await getFlags();
+    const map = {};
+    for (const f of arr) map[f.key] = f.enabled;
+    setFlags(map);
+  }
+
   useEffect(() => {
     me()
-      .then((data) => {
+      .then(async (data) => {
         setIsAuthed(true);
         setCurrentUser(data.user);
-        setAuthedPage("mood");
+        await loadFlags().catch(() => setFlags({}));
+        setAuthedPage(data.user.role === "admin" ? "admin" : "mood");
       })
       .catch(() => {
         setIsAuthed(false);
         setCurrentUser(null);
+        setFlags({});
       });
   }, []);
-
-  useEffect(() => {
-    const tabNames = {
-      mood: "Mood Check-In",
-      journal: "Journal",
-      history: "Mood History",
-    };
-    if (isAuthed) {
-      document.title = `${tabNames[authedPage] ?? "Home"} | MindSync`;
-    } else {
-      document.title = `${page === "register" ? "Register" : "Login"} | MindSync`;
-    }
-  }, [isAuthed, authedPage, page]);
 
   async function handleLogout() {
     await logoutUser();
     setIsAuthed(false);
     setCurrentUser(null);
+    setFlags({});
     setPage("login");
     setAuthedPage("mood");
     setMoodPrefill("");
   }
 
-  function handleAuthed(user) {
+  async function handleAuthed(user) {
     setIsAuthed(true);
     setCurrentUser(user || null);
-    setAuthedPage("mood");
+    await loadFlags().catch(() => setFlags({}));
+    if (user?.role === "admin") setAuthedPage("admin");
+    else setAuthedPage("mood");
   }
 
-  // ✅ EXPORT FUNCTION
   async function handleExport(format = "csv") {
+    // ✅ feature flag enforcement (front-end)
+    if (flags.exportEnabled === false) {
+      alert("Export is currently disabled by policy.");
+      return;
+    }
+
     try {
-      const res = await fetch(`http://localhost:5000/api/export?format=${format}`, {
+      const res = await fetch(`/api/export?format=${format}`, {
         method: "GET",
         credentials: "include",
       });
@@ -76,7 +84,6 @@ export default function App() {
       const blob = await res.blob();
       const ext = format === "pdf" ? "pdf" : "csv";
       const filename = `mindsync-export-${new Date().toISOString().slice(0, 10)}.${ext}`;
-
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -90,19 +97,27 @@ export default function App() {
     }
   }
 
+  // ✅ keep user from landing on disabled tabs
+  useEffect(() => {
+    if (!isAuthed || isAdmin) return;
+
+    if (authedPage === "mood" && flags.moodCheckInEnabled === false) setAuthedPage("journal");
+    if (authedPage === "journal" && flags.journalEnabled === false) setAuthedPage("history");
+    if (authedPage === "history" && flags.moodHistoryEnabled === false) setAuthedPage("mood");
+  }, [isAuthed, isAdmin, authedPage, flags]);
+
   return (
     <div style={styles.app}>
       <header style={styles.header}>
         <h1 style={styles.title}>Welcome to MindSync Wellness Portal</h1>
-        <p style={styles.subtitle}>
-          Track your emotions. Understand your mind. Improve your wellbeing.
-        </p>
+        <p style={styles.subtitle}>Track your emotions. Understand your mind. Improve your wellbeing.</p>
 
         <div style={styles.topBar}>
           {isAuthed ? (
             <>
               <div style={styles.userPill}>
                 {currentUser?.fullName ? `👋 ${currentUser.fullName}` : "👋 Logged in"}
+                {currentUser?.role ? ` — ${currentUser.role}` : ""}
               </div>
               <button onClick={handleLogout}>Logout</button>
             </>
@@ -114,36 +129,55 @@ export default function App() {
           )}
         </div>
 
-        {/* ✅ AUTHED NAV WITH EXPORT BUTTON */}
+        {/* ✅ NAV */}
         {isAuthed ? (
           <div style={styles.authedNav}>
-            <button
-              onClick={() => setAuthedPage("mood")}
-              style={authedPage === "mood" ? styles.authedBtnOn : styles.authedBtn}
-            >
-              Mood Check-In
-            </button>
+            {isAdmin ? (
+              <button
+                onClick={() => setAuthedPage("admin")}
+                style={authedPage === "admin" ? styles.authedBtnOn : styles.authedBtn}
+              >
+                Admin
+              </button>
+            ) : (
+              <>
+                {flags.moodCheckInEnabled !== false && (
+                  <button
+                    onClick={() => setAuthedPage("mood")}
+                    style={authedPage === "mood" ? styles.authedBtnOn : styles.authedBtn}
+                  >
+                    Mood Check-In
+                  </button>
+                )}
 
-            <button
-              onClick={() => setAuthedPage("journal")}
-              style={authedPage === "journal" ? styles.authedBtnOn : styles.authedBtn}
-            >
-              Journal
-            </button>
-            <button
-              onClick={() => setAuthedPage("history")}
-              style={authedPage === "history" ? styles.authedBtnOn : styles.authedBtn}
-            >
-              Mood History
-            </button>
+                {flags.journalEnabled !== false && (
+                  <button
+                    onClick={() => setAuthedPage("journal")}
+                    style={authedPage === "journal" ? styles.authedBtnOn : styles.authedBtn}
+                  >
+                    Journal
+                  </button>
+                )}
 
-
+                {flags.moodHistoryEnabled !== false && (
+                  <button
+                    onClick={() => setAuthedPage("history")}
+                    style={authedPage === "history" ? styles.authedBtnOn : styles.authedBtn}
+                  >
+                    Mood History
+                  </button>
+                )}
+              </>
+            )}
           </div>
         ) : null}
       </header>
 
+      {/* ✅ PAGE RENDER */}
       {isAuthed ? (
-        authedPage === "mood" ? (
+        isAdmin ? (
+          <AdminDashboard />
+        ) : authedPage === "mood" ? (
           <MoodCheckIn initialNote={moodPrefill} />
         ) : authedPage === "history" ? (
           <MoodHistoryChart onExport={handleExport} />
@@ -165,17 +199,8 @@ export default function App() {
 }
 
 const styles = {
-  app: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #1f2937, #0f172a, #1e3a8a)",
-  },
-
-  header: {
-    textAlign: "center",
-    paddingTop: 60,
-    paddingBottom: 10,
-  },
-
+  app: { minHeight: "100vh", background: "linear-gradient(135deg, #1f2937, #0f172a, #1e3a8a)" },
+  header: { textAlign: "center", paddingTop: 60, paddingBottom: 10 },
   title: {
     fontSize: "2.8rem",
     fontWeight: 700,
@@ -185,29 +210,9 @@ const styles = {
     margin: 0,
     letterSpacing: 1,
   },
-
-  subtitle: {
-    marginTop: 10,
-    color: "#cbd5f5",
-    fontSize: "1.1rem",
-    opacity: 0.9,
-  },
-
-  topBar: {
-    marginTop: 18,
-    display: "flex",
-    justifyContent: "center",
-    gap: 12,
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-
-  nav: {
-    display: "flex",
-    justifyContent: "center",
-    gap: 12,
-  },
-
+  subtitle: { marginTop: 10, color: "#cbd5f5", fontSize: "1.1rem", opacity: 0.9 },
+  topBar: { marginTop: 18, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" },
+  nav: { display: "flex", justifyContent: "center", gap: 12 },
   userPill: {
     padding: "10px 14px",
     borderRadius: 999,
@@ -217,15 +222,7 @@ const styles = {
     backdropFilter: "blur(10px)",
     fontWeight: 600,
   },
-
-  authedNav: {
-    marginTop: 16,
-    display: "flex",
-    justifyContent: "center",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-
+  authedNav: { marginTop: 16, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" },
   authedBtn: {
     padding: "10px 14px",
     borderRadius: 999,
@@ -234,7 +231,6 @@ const styles = {
     color: "rgba(255,255,255,0.92)",
     cursor: "pointer",
   },
-
   authedBtnOn: {
     padding: "10px 14px",
     borderRadius: 999,
