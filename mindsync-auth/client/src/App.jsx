@@ -7,6 +7,7 @@ import MoodHistoryChart from "./pages/MoodHistoryChart";
 import { logoutUser, me } from "./api/authApi";
 import AdminDashboard from "./pages/AdminDashboard";
 import { getFlags } from "./api/flagsApi";
+import ClinicianDashboard from "./pages/ClinicianDashboard";
 
 export default function App() {
   const [page, setPage] = useState("login");
@@ -14,9 +15,10 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authedPage, setAuthedPage] = useState("mood");
   const [moodPrefill, setMoodPrefill] = useState("");
+  const [flags, setFlags] = useState({});
 
-  const [flags, setFlags] = useState({}); // key -> boolean
   const isAdmin = currentUser?.role === "admin";
+  const isClinician = currentUser?.role === "clinician";
 
   async function loadFlags() {
     const arr = await getFlags();
@@ -31,7 +33,10 @@ export default function App() {
         setIsAuthed(true);
         setCurrentUser(data.user);
         await loadFlags().catch(() => setFlags({}));
-        setAuthedPage(data.user.role === "admin" ? "admin" : "mood");
+
+        if (data.user.role === "admin") setAuthedPage("admin");
+        else if (data.user.role === "clinician") setAuthedPage("clinician");
+        else setAuthedPage("mood");
       })
       .catch(() => {
         setIsAuthed(false);
@@ -54,12 +59,13 @@ export default function App() {
     setIsAuthed(true);
     setCurrentUser(user || null);
     await loadFlags().catch(() => setFlags({}));
+
     if (user?.role === "admin") setAuthedPage("admin");
+    else if (user?.role === "clinician") setAuthedPage("clinician");
     else setAuthedPage("mood");
   }
 
   async function handleExport(format = "csv") {
-    // ✅ feature flag enforcement (front-end)
     if (flags.exportEnabled === false) {
       alert("Export is currently disabled by policy.");
       return;
@@ -72,18 +78,17 @@ export default function App() {
       });
 
       if (!res.ok) {
-        let msg = "Export failed.";
-        try {
-          const data = await res.json();
-          msg = data.message || msg;
-        } catch {}
-        alert(msg);
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || "Export failed.");
         return;
       }
 
       const blob = await res.blob();
       const ext = format === "pdf" ? "pdf" : "csv";
-      const filename = `mindsync-export-${new Date().toISOString().slice(0, 10)}.${ext}`;
+      const filename = `mindsync-export-${new Date()
+        .toISOString()
+        .slice(0, 10)}.${ext}`;
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -97,86 +102,72 @@ export default function App() {
     }
   }
 
-  // ✅ keep user from landing on disabled tabs
-  useEffect(() => {
-    if (!isAuthed || isAdmin) return;
-
-    if (authedPage === "mood" && flags.moodCheckInEnabled === false) setAuthedPage("journal");
-    if (authedPage === "journal" && flags.journalEnabled === false) setAuthedPage("history");
-    if (authedPage === "history" && flags.moodHistoryEnabled === false) setAuthedPage("mood");
-  }, [isAuthed, isAdmin, authedPage, flags]);
-
   return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Welcome to MindSync Wellness Portal</h1>
-        <p style={styles.subtitle}>Track your emotions. Understand your mind. Improve your wellbeing.</p>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #1f2937, #0f172a, #1e3a8a)" }}>
+      <header style={{ textAlign: "center", paddingTop: 60, paddingBottom: 10 }}>
+        <h1 style={{
+          fontSize: "2.8rem",
+          fontWeight: 700,
+          background: "linear-gradient(90deg, #7dd3fc, #c084fc, #86efac)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          margin: 0,
+        }}>
+          Welcome to MindSync Wellness Portal
+        </h1>
 
-        <div style={styles.topBar}>
+        <div style={{ marginTop: 18 }}>
           {isAuthed ? (
             <>
-              <div style={styles.userPill}>
-                {currentUser?.fullName ? `👋 ${currentUser.fullName}` : "👋 Logged in"}
-                {currentUser?.role ? ` — ${currentUser.role}` : ""}
+              <div style={{ marginBottom: 10 }}>
+                👋 {currentUser?.fullName} — {currentUser?.role}
               </div>
               <button onClick={handleLogout}>Logout</button>
             </>
           ) : (
-            <div style={styles.nav}>
+            <>
               <button onClick={() => setPage("login")}>Login</button>
-              <button onClick={() => setPage("register")}>Register</button>
-            </div>
+              <button onClick={() => setPage("register")} style={{ marginLeft: 10 }}>
+                Register
+              </button>
+            </>
           )}
         </div>
 
-        {/* ✅ NAV */}
-        {isAuthed ? (
-          <div style={styles.authedNav}>
-            {isAdmin ? (
-              <button
-                onClick={() => setAuthedPage("admin")}
-                style={authedPage === "admin" ? styles.authedBtnOn : styles.authedBtn}
-              >
-                Admin
+        {isAuthed && (
+          <div style={{ marginTop: 16 }}>
+            {isAdmin && (
+              <button onClick={() => setAuthedPage("admin")}>Admin</button>
+            )}
+
+            {isClinician && (
+              <button onClick={() => setAuthedPage("clinician")} style={{ marginLeft: 10 }}>
+                Clinician
               </button>
-            ) : (
+            )}
+
+            {!isAdmin && !isClinician && (
               <>
-                {flags.moodCheckInEnabled !== false && (
-                  <button
-                    onClick={() => setAuthedPage("mood")}
-                    style={authedPage === "mood" ? styles.authedBtnOn : styles.authedBtn}
-                  >
-                    Mood Check-In
-                  </button>
-                )}
-
-                {flags.journalEnabled !== false && (
-                  <button
-                    onClick={() => setAuthedPage("journal")}
-                    style={authedPage === "journal" ? styles.authedBtnOn : styles.authedBtn}
-                  >
-                    Journal
-                  </button>
-                )}
-
-                {flags.moodHistoryEnabled !== false && (
-                  <button
-                    onClick={() => setAuthedPage("history")}
-                    style={authedPage === "history" ? styles.authedBtnOn : styles.authedBtn}
-                  >
-                    Mood History
-                  </button>
-                )}
+                <button onClick={() => setAuthedPage("mood")} style={{ marginLeft: 10 }}>
+                  Mood Check-In
+                </button>
+                <button onClick={() => setAuthedPage("journal")} style={{ marginLeft: 10 }}>
+                  Journal
+                </button>
+                <button onClick={() => setAuthedPage("history")} style={{ marginLeft: 10 }}>
+                  Mood History
+                </button>
               </>
             )}
           </div>
-        ) : null}
+        )}
       </header>
 
-      {/* ✅ PAGE RENDER */}
       {isAuthed ? (
-        isAdmin ? (
+        isAdmin && authedPage === "admin" ? (
           <AdminDashboard />
+        ) : isClinician && authedPage === "clinician" ? (
+          <ClinicianDashboard />
         ) : authedPage === "mood" ? (
           <MoodCheckIn initialNote={moodPrefill} />
         ) : authedPage === "history" ? (
@@ -197,47 +188,3 @@ export default function App() {
     </div>
   );
 }
-
-const styles = {
-  app: { minHeight: "100vh", background: "linear-gradient(135deg, #1f2937, #0f172a, #1e3a8a)" },
-  header: { textAlign: "center", paddingTop: 60, paddingBottom: 10 },
-  title: {
-    fontSize: "2.8rem",
-    fontWeight: 700,
-    background: "linear-gradient(90deg, #7dd3fc, #c084fc, #86efac)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    margin: 0,
-    letterSpacing: 1,
-  },
-  subtitle: { marginTop: 10, color: "#cbd5f5", fontSize: "1.1rem", opacity: 0.9 },
-  topBar: { marginTop: 18, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" },
-  nav: { display: "flex", justifyContent: "center", gap: 12 },
-  userPill: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(0,0,0,0.18)",
-    color: "rgba(255,255,255,0.92)",
-    backdropFilter: "blur(10px)",
-    fontWeight: 600,
-  },
-  authedNav: { marginTop: 16, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" },
-  authedBtn: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(0,0,0,0.10)",
-    color: "rgba(255,255,255,0.92)",
-    cursor: "pointer",
-  },
-  authedBtnOn: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(192,132,252,0.55)",
-    background: "rgba(192,132,252,0.20)",
-    color: "rgba(255,255,255,0.95)",
-    cursor: "pointer",
-    boxShadow: "0 10px 30px rgba(192,132,252,0.15)",
-  },
-};

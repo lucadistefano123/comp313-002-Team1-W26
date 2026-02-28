@@ -2,12 +2,19 @@ import { useState } from "react";
 import { registerUser } from "../api/authApi";
 
 export default function Register({ onAuthed }) {
-  const [form, setForm] = useState({ fullName: "", email: "", password: "" });
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    role: "user", // user | clinician | admin
+  });
+
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   function update(e) {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
   }
 
   async function onSubmit(e) {
@@ -18,7 +25,7 @@ export default function Register({ onAuthed }) {
     try {
       const data = await registerUser(form);
       setMsg(`✅ Registered as ${data.user.fullName} (${data.user.role})`);
-      onAuthed?.(data.user); // ✅ tell App we are logged in
+      onAuthed?.(data.user, data.user.role === "clinician" ? "clinician" : data.user.role === "admin" ? "admin" : "mood");
     } catch (e2) {
       setErr(`❌ ${e2.message}`);
     }
@@ -38,6 +45,7 @@ export default function Register({ onAuthed }) {
             onChange={update}
             required
           />
+
           <input
             style={styles.input}
             name="email"
@@ -46,6 +54,7 @@ export default function Register({ onAuthed }) {
             onChange={update}
             required
           />
+
           <input
             style={styles.input}
             name="password"
@@ -57,7 +66,44 @@ export default function Register({ onAuthed }) {
             required
           />
 
-          {/* ✅ no inline button styling so it follows your wellness theme */}
+          {/* ✅ ROLE SELECT */}
+          <div style={styles.roleBox}>
+            <div style={styles.roleTitle}>Account type</div>
+
+            <label style={styles.roleRow}>
+              <input
+                type="radio"
+                name="role"
+                value="user"
+                checked={form.role === "user"}
+                onChange={update}
+              />
+              User (track your moods)
+            </label>
+
+            <label style={styles.roleRow}>
+              <input
+                type="radio"
+                name="role"
+                value="clinician"
+                checked={form.role === "clinician"}
+                onChange={update}
+              />
+              Clinician (view assigned patients + notes)
+            </label>
+
+            <label style={styles.roleRow}>
+              <input
+                type="radio"
+                name="role"
+                value="admin"
+                checked={form.role === "admin"}
+                onChange={update}
+              />
+              Admin (manage users + feature flags)
+            </label>
+          </div>
+
           <button type="submit">Register</button>
         </form>
 
@@ -78,7 +124,7 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(0,0,0,0.18)",
     backdropFilter: "blur(10px)",
-    boxShadow: "0 18px 60px rgba(0,0,0,0.35)"
+    boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
   },
   title: { marginTop: 0, marginBottom: 12 },
   form: { display: "grid", gap: 12 },
@@ -88,8 +134,18 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(0,0,0,0.18)",
     color: "inherit",
-    fontSize: 14
+    fontSize: 14,
   },
+  roleBox: {
+    padding: 12,
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(0,0,0,0.10)",
+    display: "grid",
+    gap: 8,
+  },
+  roleTitle: { fontWeight: 700, fontSize: 14, opacity: 0.9 },
+  roleRow: { display: "flex", gap: 10, alignItems: "center", fontSize: 14 },
   ok: { marginTop: 12, opacity: 0.9 },
-  bad: { marginTop: 12, opacity: 0.9 }
+  bad: { marginTop: 12, opacity: 0.9 },
 };

@@ -1,16 +1,35 @@
 const router = require("express").Router();
+
+// ✅ auth middleware can be exported as fn OR { requireAuth: fn } OR { auth: fn }
+const authModule = require("../middleware/auth.middleware");
+const requireAuth =
+  typeof authModule === "function"
+    ? authModule
+    : authModule.requireAuth || authModule.auth;
+
+// ✅ requireAdmin can be exported as fn OR { requireAdmin: fn }
+const adminModule = require("../middleware/requireAdmin");
+const requireAdmin =
+  typeof adminModule === "function" ? adminModule : adminModule.requireAdmin;
+
+const adminController = require("../controllers/admin.controller");
+
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 
-const { requireAuth } = require("../middleware/auth.middleware"); // <-- your file that exports requireAuth
-const { requireAdmin } = require("../middleware/requireAdmin");
+if (typeof requireAuth !== "function") {
+  throw new Error("requireAuth is not a function. Check auth.middleware.js exports.");
+}
+if (typeof requireAdmin !== "function") {
+  throw new Error("requireAdmin is not a function. Check requireAdmin.js exports.");
+}
 
 // ==============================
 // GET all users (admin)
 // ==============================
 router.get("/users", requireAuth, requireAdmin, async (req, res) => {
   const users = await User.find()
-    .select("_id fullName email role isActive createdAt updatedAt")
+    .select("_id fullName email role isActive assignedClinicians createdAt updatedAt")
     .sort({ createdAt: -1 });
 
   res.json({ users });
@@ -23,7 +42,7 @@ router.patch("/users/:id/toggle", requireAuth, requireAdmin, async (req, res) =>
   const targetId = req.params.id;
 
   // prevent self-disable
-  if (String(req.user.id) === String(targetId)) {
+  if (String(req.user.id || req.user._id) === String(targetId)) {
     return res.status(400).json({ message: "You cannot disable your own account." });
   }
 
@@ -35,9 +54,9 @@ router.patch("/users/:id/toggle", requireAuth, requireAdmin, async (req, res) =>
 
   await AuditLog.create({
     action: user.isActive ? "ENABLE_USER" : "DISABLE_USER",
-    adminId: req.user.id,
+    adminId: req.user.id || req.user._id,
     targetUserId: user._id,
-    meta: { email: user.email }
+    meta: { email: user.email },
   });
 
   res.json({
@@ -47,17 +66,19 @@ router.patch("/users/:id/toggle", requireAuth, requireAdmin, async (req, res) =>
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      isActive: user.isActive
-    }
+      isActive: user.isActive,
+    },
   });
 });
 
 // ==============================
-// Change role (user <-> admin)
+// Change role (user <-> admin <-> clinician)
 // ==============================
 router.patch("/users/:id/role", requireAuth, requireAdmin, async (req, res) => {
   const { role } = req.body;
-  if (!["user", "admin"].includes(role)) {
+
+  // ✅ allow clinician too
+  if (!["user", "admin", "clinician"].includes(role)) {
     return res.status(400).json({ message: "Invalid role." });
   }
 
@@ -71,9 +92,9 @@ router.patch("/users/:id/role", requireAuth, requireAdmin, async (req, res) => {
 
   await AuditLog.create({
     action: "CHANGE_ROLE",
-    adminId: req.user.id,
+    adminId: req.user.id || req.user._id,
     targetUserId: user._id,
-    meta: { newRole: role }
+    meta: { newRole: role },
   });
 
   res.json({
@@ -83,10 +104,27 @@ router.patch("/users/:id/role", requireAuth, requireAdmin, async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      isActive: user.isActive
-    }
+      isActive: user.isActive,
+    },
   });
 });
+
+// ==============================
+// Assign clinician to patient
+// ==============================
+router.post(
+  "/users/:patientId/assign-clinician",
+  requireAuth,
+  requireAdmin,
+  adminController.assignClinicianToPatient
+);
+
+router.post(
+  "/users/:patientId/unassign-clinician",
+  requireAuth,
+  requireAdmin,
+  adminController.unassignClinicianFromPatient
+);
 
 // ==============================
 // Audit logs
@@ -101,23 +139,21 @@ router.get("/logs", requireAuth, requireAdmin, async (req, res) => {
   res.json({ logs });
 });
 
-module.exports = router;
-
 // ==============================
 // Download a user's audit data (JSON)
 // ==============================
 router.get("/users/:id/audit-export", requireAuth, requireAdmin, async (req, res) => {
   const userId = req.params.id;
 
-  const user = await User.findById(userId).select("_id fullName email role isActive createdAt updatedAt");
+  const user = await User.findById(userId).select(
+    "_id fullName email role isActive createdAt updatedAt"
+  );
   if (!user) return res.status(404).json({ message: "User not found." });
 
-  // logs where they were the TARGET
   const targetLogs = await AuditLog.find({ targetUserId: userId })
     .sort({ createdAt: -1 })
     .populate("adminId", "fullName email");
 
-  // logs where they were the ADMIN (if they are admin)
   const adminLogs = await AuditLog.find({ adminId: userId })
     .sort({ createdAt: -1 })
     .populate("targetUserId", "fullName email");
@@ -135,3 +171,5 @@ router.get("/users/:id/audit-export", requireAuth, requireAdmin, async (req, res
   res.setHeader("Content-Disposition", `attachment; filename="audit-${user.email}.json"`);
   return res.status(200).send(JSON.stringify(payload, null, 2));
 });
+
+module.exports = router;

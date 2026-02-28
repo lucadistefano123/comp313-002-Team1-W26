@@ -29,3 +29,30 @@ export function setUserRole(id, role) {
 export function getAuditLogs() {
   return fetch(`${API_BASE}/admin/logs`, { credentials: "include" }).then(handle);
 }
+
+// client/src/api/adminApi.js
+export function assignClinician(patientId, clinicianId) {
+  return fetch(`/api/admin/users/${patientId}/assign-clinician`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ clinicianId }),
+  }).then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Assign failed");
+    return data;
+  });
+}
+
+export function unassignClinician(patientId, clinicianId) {
+  return fetch(`/api/admin/users/${patientId}/unassign-clinician`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ clinicianId }),
+  }).then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Unassign failed");
+    return data;
+  });
+}

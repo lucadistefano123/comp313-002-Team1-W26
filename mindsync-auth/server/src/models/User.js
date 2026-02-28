@@ -1,38 +1,33 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema(
+const UserSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-
-    // stored hash only (never store plain password)
     passwordHash: { type: String, required: true },
-
-    role: { type: String, enum: ["user", "admin"], default: "user" },
-    isActive: { type: Boolean, default: true }
+    role: { type: String, enum: ["user", "clinician", "admin"], default: "user" },
+    assignedClinicians: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-// virtual password field (not stored in db)
-userSchema.virtual("password").set(function (plainPassword) {
-  this._plainPassword = plainPassword;
+UserSchema.virtual("password").set(function (plain) {
+  this._plainPassword = plain;
 });
 
-// ✅ hash BEFORE validation, without using next()
-userSchema.pre("validate", async function () {
-  if (!this._plainPassword) return;
-
-  const salt = await bcrypt.genSalt(12);
-  this.passwordHash = await bcrypt.hash(this._plainPassword, salt);
-
-  this._plainPassword = undefined;
+// ✅ async hook WITHOUT next()
+UserSchema.pre("validate", async function () {
+  if (this._plainPassword) {
+    const salt = await bcrypt.genSalt(10);
+    this.passwordHash = await bcrypt.hash(this._plainPassword, salt);
+    this._plainPassword = undefined;
+  }
 });
 
-// compare password during login
-userSchema.methods.comparePassword = function (plainPassword) {
-  return bcrypt.compare(plainPassword, this.passwordHash);
+UserSchema.methods.comparePassword = function (plain) {
+  return bcrypt.compare(plain, this.passwordHash);
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("User", UserSchema);

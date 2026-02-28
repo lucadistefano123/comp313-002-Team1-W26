@@ -4,7 +4,7 @@ const cookieParser = require("cookie-parser");
 const path = require("path");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-
+const clinicianRoutes = require("./routes/clinician.routes");
 const authRoutes = require("./routes/auth.routes");
 const moodRoutes = require("./routes/mood.routes");
 const exportRoutes = require("./routes/export.routes");
@@ -52,6 +52,7 @@ function createApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/moods", moodRoutes);
   app.use("/api/export", exportLimiter, exportRoutes);
+  app.use("/api/clinician", clinicianRoutes);
 
   // =============================
   // REACT STATIC BUILD

@@ -1,0 +1,155 @@
+/* client/src/pages/ClinicianDashboard.css */
+
+.clinician-page {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+.clinician-sidebar {
+  width: 340px;
+  min-width: 340px;
+}
+
+.clinician-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-error {
+  color: #ff4d4f;
+  margin-bottom: 10px;
+}
+
+.status-msg {
+  color: #3ddc97;
+  margin-bottom: 10px;
+}
+
+.section-title {
+  margin-top: 14px;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+/* Lists */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A row with a big patient button and a small action button */
+.user-row {
+  display: grid;
+  grid-template-columns: 1fr 76px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* Dark themed card/button */
+.user-card {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.user-card:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+.user-card.selected {
+  outline: 2px solid rgba(167,139,250,0.9);
+}
+
+.user-name {
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 12px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-btn {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+.action-btn:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Main content panels */
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.panel {
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+}
+
+.panel-scroll {
+  max-height: 520px;
+  overflow: auto;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
+.text-input::placeholder {
+  color: rgba(255,255,255,0.55);
+}
+
+/* Optional: make sidebar scroll if lots of users */
+.sidebar-scroll {
+  max-height: 68vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+.action-btn.danger {
+  background: #b91c1c;
+}
+.action-btn.danger:hover {
+  background: #991b1b;
+}
+.action-btn.danger:disabled {
+  opacity: 0.6;
+}
