@@ -100,22 +100,14 @@ export default function ClinicianDashboard() {
   }
 
   async function onExport() {
-    try {
-      const data = await exportPatient(selectedId);
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${selectedPatient?.fullName}-export.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setMsg("Export downloaded.");
-    } catch (e) {
-      setErr(e.message);
-    }
+  try {
+    await exportPatient(selectedId);
+    setMsg("Export downloaded.");
+    setErr("");
+  } catch (e) {
+    setErr(e.message);
   }
+}
 
   return (
     <div className="clinician-page">

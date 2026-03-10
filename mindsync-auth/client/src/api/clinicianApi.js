@@ -1,16 +1,12 @@
 const API_BASE = "/api/clinician";
 
-// helper
 async function asJson(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message || "Request failed");
   return data;
 }
 
-// ==============================
-// ✅ NEW: get all users (role=user)
-// GET /api/clinician/users/all
-// ==============================
+
 export async function getAllUsers() {
   const res = await fetch(`${API_BASE}/users/all`, {
     credentials: "include",
@@ -18,10 +14,7 @@ export async function getAllUsers() {
   return asJson(res);
 }
 
-// ==============================
-// ✅ existing: get my assigned patients
-// GET /api/clinician/patients
-// ==============================
+
 export async function getMyPatients() {
   const res = await fetch(`${API_BASE}/patients`, {
     credentials: "include",
@@ -29,10 +22,7 @@ export async function getMyPatients() {
   return asJson(res);
 }
 
-// ==============================
-// ✅ NEW: clinician self-assign patient
-// POST /api/clinician/users/:patientId/assign-me
-// ==============================
+
 export async function assignMeToPatient(patientId) {
   const res = await fetch(`${API_BASE}/users/${patientId}/assign-me`, {
     method: "POST",
@@ -42,9 +32,7 @@ export async function assignMeToPatient(patientId) {
   return asJson(res);
 }
 
-// ==============================
-// Patient data
-// ==============================
+
 export async function getPatientMoods(patientId) {
   const res = await fetch(`${API_BASE}/${patientId}/moods`, {
     credentials: "include",
@@ -73,7 +61,29 @@ export async function exportPatient(patientId) {
   const res = await fetch(`${API_BASE}/${patientId}/export`, {
     credentials: "include",
   });
-  return asJson(res);
+
+  if (!res.ok) {
+    let msg = "Export failed";
+    try {
+      const data = await res.json();
+      msg = data?.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const blob = await res.blob();
+  const filename = `patient-export-${patientId}-${new Date().toISOString().slice(0, 10)}.pdf`;
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+
+  return;
 }
 
 export async function dropPatient(patientId) {
@@ -82,7 +92,6 @@ export async function dropPatient(patientId) {
     credentials: "include",
   });
 
-  // if server returns HTML, show the text so you can see what you hit
   const text = await res.text();
   let data;
   try {

@@ -1,4 +1,3 @@
-// server/src/routes/clinician.routes.js
 const router = require("express").Router();
 
 const authModule = require("../middleware/auth.middleware");
@@ -13,7 +12,6 @@ if (typeof requireAuth !== "function") {
   );
 }
 
-// allow clinician OR admin
 function requireClinicianOrAdmin(req, res, next) {
   const role = req.user?.role;
   if (role === "clinician" || role === "admin") return next();
@@ -22,10 +20,7 @@ function requireClinicianOrAdmin(req, res, next) {
 
 const clinicianController = require("../controllers/clinician.controller");
 
-// ==============================
-// ✅ NEW: list ALL users (patients pool)
-// GET /api/clinician/users/all
-// ==============================
+
 router.get(
   "/users/all",
   requireAuth,
@@ -33,10 +28,7 @@ router.get(
   clinicianController.listAllUsers
 );
 
-// ==============================
-// ✅ NEW: clinician self-assign patient
-// POST /api/clinician/users/:patientId/assign-me
-// ==============================
+
 router.post(
   "/users/:patientId/assign-me",
   requireAuth,
@@ -44,10 +36,7 @@ router.post(
   clinicianController.assignMeToPatient
 );
 
-// ==============================
-// Existing: clinician’s assigned patients
-// GET /api/clinician/patients
-// ==============================
+
 router.get(
   "/patients",
   requireAuth,
@@ -55,9 +44,7 @@ router.get(
   clinicianController.listMyPatients
 );
 
-// ==============================
-// Patient data (only if assigned)
-// ==============================
+
 router.get(
   "/:patientId/moods",
   requireAuth,
@@ -86,8 +73,6 @@ router.get(
   clinicianController.exportPatientData
 );
 
-// ✅ NEW: clinician self-drop patient
-// DELETE /api/clinician/patients/:patientId/drop-me
 router.delete(
   "/patients/:patientId/drop-me",
   requireAuth,

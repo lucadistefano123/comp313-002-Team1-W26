@@ -1,5 +1,6 @@
 // server/src/controllers/clinician.controller.js
 const mongoose = require("mongoose");
+const PDFDocument = require("pdfkit");
 const User = require("../models/User");
 const MoodEntry = require("../models/MoodEntry");
 const ClinicianNote = require("../models/ClinicianNote");
@@ -118,7 +119,7 @@ exports.addPatientNote = async (req, res) => {
   }
 };
 
-// simple JSON export (easy to download on frontend)
+// export patient data as PDF or JSON
 exports.exportPatientData = async (req, res) => {
   try {
     const { patientId } = req.params;
@@ -132,26 +133,106 @@ exports.exportPatientData = async (req, res) => {
     const patient = await User.findById(patientId).select(
       "fullName email createdAt"
     );
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
 
     const moods = await MoodEntry.find({ userId: patientId }).sort({
       createdAt: -1,
     });
-    const notes = await ClinicianNote.find({ patientId }).sort({
-      createdAt: -1,
-    });
 
-    return res.json({
-      patient,
-      moods,
-      notes,
-      exportedAt: new Date().toISOString(),
-    });
+    const notes = await ClinicianNote.find({ patientId })
+      .populate("clinicianId", "fullName email")
+      .sort({ createdAt: -1 });
+
+    const doc = new PDFDocument({ margin: 50 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="patient-export-${patientId}.pdf"`
+    );
+
+    doc.pipe(res);
+    doc.fontSize(20).text("MindSync Patient Export", { underline: true });
+    doc.moveDown();
+
+    doc.fontSize(14).text(`Patient: ${patient.fullName || "N/A"}`);
+    doc.text(`Email: ${patient.email || "N/A"}`);
+    doc.text(
+      `Account Created: ${
+        patient.createdAt ? new Date(patient.createdAt).toLocaleString() : "N/A"
+      }`
+    );
+    doc.text(`Exported At: ${new Date().toLocaleString()}`);
+    doc.moveDown();
+
+    doc.fontSize(16).text("Mood Entries");
+    doc.moveDown(0.5);
+
+    if (!moods.length) {
+      doc.fontSize(12).text("No mood entries found.");
+    } else {
+      moods.forEach((mood, index) => {
+        doc
+          .fontSize(12)
+          .text(
+            `${index + 1}. Date: ${
+              mood.createdAt ? new Date(mood.createdAt).toLocaleString() : "N/A"
+            }`
+          );
+
+        if (mood.moodScore !== undefined) {
+          doc.text(`   Mood Score: ${mood.moodScore}`);
+        }
+
+        if (mood.mood !== undefined) {
+          doc.text(`   Mood: ${mood.mood}`);
+        }
+
+        if (mood.emotionTags && mood.emotionTags.length) {
+          doc.text(`   Emotion Tags: ${mood.emotionTags.join(", ")}`);
+        }
+
+        if (mood.note) {
+          doc.text(`   Note: ${mood.note}`);
+        }
+
+        doc.moveDown(0.5);
+      });
+    }
+
+    doc.moveDown();
+    doc.fontSize(16).text("Clinician Notes");
+    doc.moveDown(0.5);
+
+    if (!notes.length) {
+      doc.fontSize(12).text("No clinician notes found.");
+    } else {
+      notes.forEach((entry, index) => {
+        doc
+          .fontSize(12)
+          .text(
+            `${index + 1}. Date: ${
+              entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "N/A"
+            }`
+          );
+
+        doc.text(
+          `   Clinician: ${
+            entry.clinicianId?.fullName ||
+            entry.clinicianId?.email ||
+            "Unknown"
+          }`
+        );
+
+        doc.text(`   Note: ${entry.note || "No content"}`);
+        doc.moveDown(0.5);
+      });
+    }
+
+    doc.end();
   } catch (e) {
     return res.status(500).json({ message: e.message });
   }
 };
-
 
 exports.listAllUsers = async (req, res) => {
   try {

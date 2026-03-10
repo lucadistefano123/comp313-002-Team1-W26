@@ -12,13 +12,11 @@ async function start() {
   await connectDB(process.env.MONGO_URI);
   console.log("✅ MongoDB connected");
 
-  // ✅ seed flags AFTER DB connects, BEFORE server starts
   await seedFeatureFlags();
   console.log("✅ Feature flags seeded");
 
   const app = createApp();
 
-  // ✅ mount routes BEFORE listen
   app.use("/api/admin", adminRoutes);
   app.use("/api/flags", flagsRoutes);
 
