@@ -57,8 +57,11 @@ export async function addPatientNote(patientId, note) {
   return asJson(res);
 }
 
-export async function exportPatient(patientId) {
-  const res = await fetch(`${API_BASE}/${patientId}/export`, {
+export async function exportPatient(patientId, format = "pdf") {
+  const params = new URLSearchParams();
+  params.set("format", format);
+
+  const res = await fetch(`${API_BASE}/${patientId}/export?${params.toString()}`, {
     credentials: "include",
   });
 
@@ -72,7 +75,8 @@ export async function exportPatient(patientId) {
   }
 
   const blob = await res.blob();
-  const filename = `patient-export-${patientId}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  const ext = format === "csv" ? "csv" : "pdf";
+  const filename = `patient-export-${patientId}-${new Date().toISOString().slice(0, 10)}.${ext}`;
 
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -82,8 +86,6 @@ export async function exportPatient(patientId) {
   a.click();
   a.remove();
   window.URL.revokeObjectURL(url);
-
-  return;
 }
 
 export async function dropPatient(patientId) {

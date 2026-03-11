@@ -99,15 +99,15 @@ export default function ClinicianDashboard() {
     }
   }
 
-  async function onExport() {
-  try {
-    await exportPatient(selectedId);
-    setMsg("Export downloaded.");
-    setErr("");
-  } catch (e) {
-    setErr(e.message);
+  async function onExport(format) {
+    try {
+      await exportPatient(selectedId, format);
+      setMsg(`${format.toUpperCase()} export downloaded.`);
+      setErr("");
+    } catch (e) {
+      setErr(e.message);
+    }
   }
-}
 
   return (
     <div className="clinician-page">
@@ -187,9 +187,14 @@ export default function ClinicianDashboard() {
         </h2>
 
         {selectedPatient && (
-          <button className="action-btn" onClick={onExport}>
-            Download Export
-          </button>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+            <button className="action-btn" onClick={() => onExport("csv")}>
+              Download Export (CSV)
+            </button>
+            <button className="action-btn" onClick={() => onExport("pdf")}>
+              Download Export (PDF)
+            </button>
+          </div>
         )}
 
         <div className="panel-grid">
