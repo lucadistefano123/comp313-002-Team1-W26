@@ -137,6 +137,7 @@ export default function MoodCheckIn({ initialNote = "" }) {
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={styles.select}>
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
+            <option value={90}>Last 90 days</option>
           </select>
         </div>
 
