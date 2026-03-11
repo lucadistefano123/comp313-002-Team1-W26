@@ -113,8 +113,13 @@ export default function App() {
           WebkitTextFillColor: "transparent",
           margin: 0,
         }}>
-          Welcome to MindSync Wellness Portal
+          Welcome to
+          <br></br>MindSync Wellness Portal
         </h1>
+
+        <p style={{ margin: "1em 0 2em 0", fontSize: 15 }}>
+          Track your emotions. Understand your mind. Improve your wellbeing. 🧠 
+        </p>
 
         <div style={{ marginTop: 18 }}>
           {isAuthed ? (
@@ -181,7 +186,7 @@ export default function App() {
           />
         )
       ) : page === "login" ? (
-        <Login onAuthed={handleAuthed} />
+        <Login onAuthed={handleAuthed} onGoToRegister={() => setPage("register")} />
       ) : (
         <Register onAuthed={handleAuthed} />
       )}
