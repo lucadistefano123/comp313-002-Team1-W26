@@ -144,9 +144,9 @@ export default function MoodCheckIn({ initialNote = "" }) {
         {entries.length === 0 ? (
           <p style={styles.p}>No entries yet.</p>
         ) : (
-          <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "grid", gap: 10, width: "100%" }}>
             {entries.map((en) => (
-              <div key={en._id} style={styles.entry}>
+              <div key={en._id} style={{ ...styles.entry, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                   <div><b>{en.rating}/10</b></div>
                   <div style={{ opacity: 0.8, fontSize: 12 }}>
@@ -160,7 +160,7 @@ export default function MoodCheckIn({ initialNote = "" }) {
                     ))}
                   </div>
                 ) : null}
-                {en.note ? <div style={{ marginTop: 8, opacity: 0.9 }}>{en.note}</div> : null}
+                {en.note ? <div style={{ marginTop: 8, opacity: 0.9, wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{en.note}</div> : null}
               </div>
             ))}
           </div>

@@ -206,7 +206,7 @@ export default function ClinicianDashboard() {
               {moods.map((m) => (
                 <div key={m._id} className="entry">
                   <b>{m.mood}</b> ({m.score})
-                  {m.note && <div>{m.note}</div>}
+                  {m.note && <div style={{ wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{m.note}</div>}
                   <small>{new Date(m.createdAt).toLocaleString()}</small>
                 </div>
               ))}
@@ -237,7 +237,7 @@ export default function ClinicianDashboard() {
               {notes.length === 0 && <div>No notes yet.</div>}
               {notes.map((n) => (
                 <div key={n._id} className="entry">
-                  {n.note}
+                  <div style={{ wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{n.note}</div>
                   <small>
                     {n.clinicianId?.fullName} —{" "}
                     {new Date(n.createdAt).toLocaleString()}
