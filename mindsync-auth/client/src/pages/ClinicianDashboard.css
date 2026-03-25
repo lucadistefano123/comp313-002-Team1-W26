@@ -1,19 +1,43 @@
 /* client/src/pages/ClinicianDashboard.css */
 
+.clinician-shell {
+  width: min(1100px, 94vw);
+  margin: 0 auto;
+  padding: 20px 0 28px;
+}
+
+.clinician-header {
+  margin-bottom: 14px;
+}
+
+.clinician-header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
 .clinician-page {
-  display: flex;
-  gap: 20px;
-  padding: 20px;
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
 }
 
 .clinician-sidebar {
-  width: 340px;
-  min-width: 340px;
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
 }
 
 .clinician-main {
-  flex: 1;
   min-width: 0;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
 }
 
 .status-error {
@@ -27,7 +51,7 @@
 }
 
 .section-title {
-  margin-top: 14px;
+  margin-top: 16px;
   margin-bottom: 10px;
   font-weight: 700;
 }
@@ -42,9 +66,17 @@
 /* A row with a big patient button and a small action button */
 .user-row {
   display: grid;
-  grid-template-columns: 1fr 76px;
+  grid-template-columns: 1fr 112px;
   gap: 10px;
   align-items: stretch;
+}
+
+.user-row .action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
 }
 
 /* Dark themed card/button */
@@ -70,17 +102,15 @@
 .user-name {
   font-weight: 800;
   line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .user-email {
   font-size: 12px;
   opacity: 0.85;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .action-btn {
@@ -119,6 +149,24 @@
   overflow: auto;
 }
 
+.panel-grid-vertical {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.panel-grid-vertical > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 42vh;
+}
+
+.panel-grid-vertical > div > .panel-scroll {
+  max-height: 100%;
+  flex: 1;
+}
+
 .input-row {
   display: flex;
   gap: 10px;
@@ -140,7 +188,7 @@
 
 /* Optional: make sidebar scroll if lots of users */
 .sidebar-scroll {
-  max-height: 68vh;
+  max-height: 38vh;
   overflow: auto;
   padding-right: 4px;
 }
@@ -164,4 +212,18 @@
   overflow-wrap: break-word;
   word-break: break-all;
   min-width: 0;
+}
+
+@media (max-width: 1160px) {
+  .clinician-page {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-scroll {
+    max-height: 32vh;
+  }
+
+  .panel-grid-vertical > div {
+    max-height: 36vh;
+  }
 }

@@ -6,7 +6,7 @@ import {
   getPatientMoods,
   getPatientNotes,
   addPatientNote,
-    dropPatient,
+  dropPatient,
   exportPatient,
 } from "../api/clinicianApi";
 
@@ -52,19 +52,19 @@ export default function ClinicianDashboard() {
   }
 
   async function onDropPatient(id) {
-  try {
-    await dropPatient(id);
-    setMsg("Patient dropped.");
-    setErr("");
-    setSelectedId("");
-    setMoods([]);
-    setNotes([]);
-    await loadPatients();
-    await loadAllUsers(); // optional refresh
-  } catch (e) {
-    setErr(e.message);
+    try {
+      await dropPatient(id);
+      setMsg("Patient dropped.");
+      setErr("");
+      setSelectedId("");
+      setMoods([]);
+      setNotes([]);
+      await loadPatients();
+      await loadAllUsers();
+    } catch (e) {
+      setErr(e.message);
+    }
   }
-}
 
   useEffect(() => {
     Promise.all([loadAllUsers(), loadPatients()]).catch((e) =>
@@ -81,6 +81,7 @@ export default function ClinicianDashboard() {
     try {
       await assignMeToPatient(id);
       setMsg("Patient added.");
+      setErr("");
       await loadPatients();
       setSelectedId(id);
     } catch (e) {
@@ -94,6 +95,7 @@ export default function ClinicianDashboard() {
       setNoteText("");
       await loadPatientData(selectedId);
       setMsg("Note added.");
+      setErr("");
     } catch (e) {
       setErr(e.message);
     }
@@ -110,15 +112,17 @@ export default function ClinicianDashboard() {
   }
 
   return (
-    <div className="clinician-page">
+    <div className="clinician-shell">
+      <div className="clinician-header">
+        <h1>Clinician</h1>
+        {err && <div className="status-error">{err}</div>}
+        {msg && <div className="status-msg">{msg}</div>}
+      </div>
+
+      <div className="clinician-page">
 
       {/* SIDEBAR */}
       <div className="clinician-sidebar">
-
-        <h2>Clinician</h2>
-
-        {err && <div className="status-error">{err}</div>}
-        {msg && <div className="status-msg">{msg}</div>}
 
         <div className="section-title">All Users (add as patient)</div>
 
@@ -158,24 +162,24 @@ export default function ClinicianDashboard() {
             <div style={{ opacity: 0.7 }}>No patients assigned yet.</div>
           )}
 
-        {patients.map((p) => (
-  <div key={p._id} className="user-row">
-    <button
-      className={`user-card ${selectedId === p._id ? "selected" : ""}`}
-      onClick={() => setSelectedId(p._id)}
-    >
-      <div className="user-name">{p.fullName}</div>
-      <div className="user-email">{p.email}</div>
-    </button>
+          {patients.map((p) => (
+            <div key={p._id} className="user-row">
+              <button
+                className={`user-card ${selectedId === p._id ? "selected" : ""}`}
+                onClick={() => setSelectedId(p._id)}
+              >
+                <div className="user-name">{p.fullName}</div>
+                <div className="user-email">{p.email}</div>
+              </button>
 
-    <button
-      className="action-btn"
-      onClick={() => onDropPatient(p._id)}
-    >
-      Drop
-    </button>
-  </div>
-))}
+              <button
+                className="action-btn"
+                onClick={() => onDropPatient(p._id)}
+              >
+                Drop
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -197,7 +201,7 @@ export default function ClinicianDashboard() {
           </div>
         )}
 
-        <div className="panel-grid">
+        <div className="panel-grid-vertical">
 
           <div>
             <h3>Mood Entries</h3>
@@ -205,7 +209,7 @@ export default function ClinicianDashboard() {
               {moods.length === 0 && <div>No mood entries.</div>}
               {moods.map((m) => (
                 <div key={m._id} className="entry">
-                  <b>{m.mood}</b> ({m.score})
+                  <b>{m.rating}/10</b>
                   {m.note && <div style={{ wordWrap: "break-word", overflowWrap: "break-word", wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{m.note}</div>}
                   <small>{new Date(m.createdAt).toLocaleString()}</small>
                 </div>
@@ -249,6 +253,7 @@ export default function ClinicianDashboard() {
           </div>
 
         </div>
+      </div>
       </div>
     </div>
   );

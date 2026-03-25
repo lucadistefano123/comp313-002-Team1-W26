@@ -139,31 +139,17 @@ export default function App() {
           )}
         </div>
 
-        {isAuthed && (
+        {isAuthed && !isAdmin && !isClinician && (
           <div style={{ marginTop: 16 }}>
-            {isAdmin && (
-              <button onClick={() => setAuthedPage("admin")}>Admin</button>
-            )}
-
-            {isClinician && (
-              <button onClick={() => setAuthedPage("clinician")} style={{ marginLeft: 10 }}>
-                Clinician
-              </button>
-            )}
-
-            {!isAdmin && !isClinician && (
-              <>
-                <button onClick={() => setAuthedPage("mood")} style={{ marginLeft: 10 }}>
-                  Mood Check-In
-                </button>
-                <button onClick={() => setAuthedPage("journal")} style={{ marginLeft: 10 }}>
-                  Journal
-                </button>
-                <button onClick={() => setAuthedPage("history")} style={{ marginLeft: 10 }}>
-                  Mood History
-                </button>
-              </>
-            )}
+            <button onClick={() => setAuthedPage("mood")} style={{ marginLeft: 10 }}>
+              Mood Check-In
+            </button>
+            <button onClick={() => setAuthedPage("journal")} style={{ marginLeft: 10 }}>
+              Journal
+            </button>
+            <button onClick={() => setAuthedPage("history")} style={{ marginLeft: 10 }}>
+              Mood History
+            </button>
           </div>
         )}
       </header>

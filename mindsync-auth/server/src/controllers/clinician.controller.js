@@ -6,6 +6,8 @@ const User = require("../models/User");
 const MoodEntry = require("../models/MoodEntry");
 const ClinicianNote = require("../models/ClinicianNote");
 
+const PATIENT_ACCESS_DENIED_MESSAGE = "You are not allowed to view this patient.";
+
 function isAdmin(user) {
   return user?.role === "admin";
 }
@@ -57,7 +59,9 @@ exports.getPatientMoods = async (req, res) => {
       return res.status(400).json({ message: "Invalid patientId" });
 
     const ok = await ensureAccess(req, patientId);
-    if (!ok) return res.status(403).json({ message: "Forbidden" });
+    if (!ok) {
+      return res.status(403).json({ message: PATIENT_ACCESS_DENIED_MESSAGE });
+    }
 
     const moods = await MoodEntry.find({ userId: patientId }).sort({
       createdAt: -1,
@@ -76,7 +80,9 @@ exports.getPatientNotes = async (req, res) => {
       return res.status(400).json({ message: "Invalid patientId" });
 
     const ok = await ensureAccess(req, patientId);
-    if (!ok) return res.status(403).json({ message: "Forbidden" });
+    if (!ok) {
+      return res.status(403).json({ message: PATIENT_ACCESS_DENIED_MESSAGE });
+    }
 
     const notes = await ClinicianNote.find({ patientId })
       .populate("clinicianId", "fullName email")
@@ -100,7 +106,9 @@ exports.addPatientNote = async (req, res) => {
       return res.status(400).json({ message: "Note is required" });
 
     const ok = await ensureAccess(req, patientId);
-    if (!ok) return res.status(403).json({ message: "Forbidden" });
+    if (!ok) {
+      return res.status(403).json({ message: PATIENT_ACCESS_DENIED_MESSAGE });
+    }
 
     // ✅ FIX: support both _id and id from auth middleware
     const clinicianId = req.user?._id || req.user?.id;
@@ -131,7 +139,9 @@ exports.exportPatientData = async (req, res) => {
     }
 
     const ok = await ensureAccess(req, patientId);
-    if (!ok) return res.status(403).json({ message: "Forbidden" });
+    if (!ok) {
+      return res.status(403).json({ message: PATIENT_ACCESS_DENIED_MESSAGE });
+    }
 
     const patient = await User.findById(patientId).select(
       "fullName email createdAt"
