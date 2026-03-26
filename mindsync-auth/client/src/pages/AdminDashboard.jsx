@@ -1,6 +1,28 @@
-import { useEffect, useState } from "react";
-import { getUsers, toggleUser, setUserRole, getAuditLogs } from "../api/adminApi";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getUsers,
+  toggleUser,
+  setUserRole,
+  getAuditLogs,
+  getMoodTrends,
+  getReportSummary,
+  getReportPdf,
+  listReportSchedules,
+  createReportSchedule,
+  deleteReportSchedule,
+} from "../api/adminApi";
 import { getFlags, updateFlag } from "../api/flagsApi";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine,
+} from "recharts";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -8,6 +30,22 @@ export default function AdminDashboard() {
   const [featureFlags, setFeatureFlags] = useState([]);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+
+  const today = new Date();
+  const dateToInput = (date) => date.toISOString().slice(0, 10);
+  const [trendStart, setTrendStart] = useState(dateToInput(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
+  const [trendEnd, setTrendEnd] = useState(dateToInput(today));
+  const [trendData, setTrendData] = useState([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendError, setTrendError] = useState("");
+
+  const [scheduleFrequency, setScheduleFrequency] = useState("weekly");
+  const [scheduleStart, setScheduleStart] = useState(dateToInput(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
+  const [scheduleEnd, setScheduleEnd] = useState(dateToInput(today));
+  const [schedules, setSchedules] = useState([]);
+  const [scheduleMsg, setScheduleMsg] = useState("");
+  const [scheduleErr, setScheduleErr] = useState("");
+
 
   async function refresh() {
     setErr("");
@@ -18,6 +56,44 @@ export default function AdminDashboard() {
     setLogs(l.logs || []);
     const f = await getFlags();
     setFeatureFlags(f || []);
+    await loadMoodTrends(trendStart, trendEnd);
+    await loadSchedules();
+  }
+
+  async function loadMoodTrends(start, end) {
+    setTrendError("");
+    setTrendLoading(true);
+    try {
+      const data = await getMoodTrends(start, end);
+      setTrendData(data.history || []);
+    } catch (e) {
+      setTrendError(e?.message || "Failed to load mood trends");
+      setTrendData([]);
+    } finally {
+      setTrendLoading(false);
+    }
+  }
+
+  async function loadSchedules() {
+    try {
+      setScheduleErr("");
+      const data = await listReportSchedules();
+      setSchedules(data.schedules || []);
+    } catch (e) {
+      setScheduleErr(e?.message || "Failed to load schedules");
+      setSchedules([]);
+    }
+  }
+
+  function setTrendPreset(days) {
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - (days - 1));
+    const startStr = dateToInput(startDate);
+    const endStr = dateToInput(endDate);
+    setTrendStart(startStr);
+    setTrendEnd(endStr);
+    loadMoodTrends(startStr, endStr);
   }
 
   useEffect(() => {
@@ -87,12 +163,170 @@ export default function AdminDashboard() {
     }
   }
 
+  async function createSchedule() {
+    setScheduleErr("");
+    setScheduleMsg("");
+    try {
+      const data = await createReportSchedule({
+        frequency: scheduleFrequency,
+        startDate: scheduleStart,
+        endDate: scheduleEnd,
+      });
+      setScheduleMsg("Schedule created.");
+      setSchedules((prev) => [data.schedule, ...prev]);
+    } catch (e) {
+      setScheduleErr(e.message);
+    }
+  }
+
+  async function removeSchedule(id) {
+    setScheduleErr("");
+    setScheduleMsg("");
+    try {
+      await deleteReportSchedule(id);
+      setScheduleMsg("Schedule deleted.");
+      setSchedules((prev) => prev.filter((s) => s._id !== id));
+    } catch (e) {
+      setScheduleErr(e.message);
+    }
+  }
+
+  async function exportPdf() {
+    try {
+      const blob = await getReportPdf(trendStart, trendEnd);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `org-report-${trendStart}-${trendEnd}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      setTrendError(e.message);
+    }
+  }
+
   return (
     <div style={{ padding: 20, maxWidth: 1100, margin: "0 auto" }}>
       <h1>Admin Dashboard</h1>
 
       {msg && <p style={{ opacity: 0.9 }}>✅ {msg}</p>}
       {err && <p style={{ opacity: 0.9 }}>❌ {err}</p>}
+
+      {/* ===================== ORGANIZATION MOOD TRENDS ===================== */}
+      <h2 style={{ marginTop: 24 }}>Organization Mood Trends</h2>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <label style={{ fontSize: 13, opacity: 0.7 }}>Range</label>
+        <select value={trendStart === null ? "" : 7} style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }} readOnly>
+          <option>Custom</option>
+        </select>
+        <button onClick={() => setTrendPreset(7)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 7 days</button>
+        <button onClick={() => setTrendPreset(30)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 30 days</button>
+        <button onClick={() => setTrendPreset(90)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 90 days</button>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <input
+          data-testid="admin-trend-start"
+          type="date"
+          value={trendStart}
+          onChange={(e) => setTrendStart(e.target.value)}
+          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+        />
+        <span style={{ color: "rgba(255,255,255,0.7)"}}>→</span>
+        <input
+          data-testid="admin-trend-end"
+          type="date"
+          value={trendEnd}
+          onChange={(e) => setTrendEnd(e.target.value)}
+          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+        />
+        <button onClick={() => loadMoodTrends(trendStart, trendEnd)} style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}>
+          Apply
+        </button>
+      </div>
+
+      {trendError && <p style={{ color: "#fca5a5" }}>{trendError}</p>}
+      {trendLoading ? (
+        <p>Loading trend data…</p>
+      ) : (
+        <div style={{ width: "100%", height: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="date" stroke="rgba(255,255,255,0.6)" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
+              <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} stroke="rgba(255,255,255,0.6)" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
+              <Tooltip />
+              <Legend />
+              <ReferenceLine y={5} stroke="rgba(255,255,255,0.3)" strokeDasharray="4 4" />
+              <Line type="monotone" dataKey="avg" stroke="#c084fc" strokeWidth={2} dot={false} name="Org average" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ===================== SCHEDULED SUMMARY REPORTS ===================== */}
+      <h2 style={{ marginTop: 26 }}>Scheduled Summary Reports</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+        <select
+          value={scheduleFrequency}
+          onChange={(e) => setScheduleFrequency(e.target.value)}
+          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+        >
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+
+        <input
+          type="date"
+          value={scheduleStart}
+          onChange={(e) => setScheduleStart(e.target.value)}
+          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+        />
+        <span>→</span>
+        <input
+          type="date"
+          value={scheduleEnd}
+          onChange={(e) => setScheduleEnd(e.target.value)}
+          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+        />
+
+        <button
+          onClick={createSchedule}
+          style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}
+        >
+          Schedule Report
+        </button>
+
+        <button
+          onClick={exportPdf}
+          style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#0ea5e9", border: "none", color: "white" }}
+        >
+          Generate PDF Now
+        </button>
+      </div>
+
+      {scheduleMsg && <p style={{ color: "#a3e635" }}>{scheduleMsg}</p>}
+      {scheduleErr && <p style={{ color: "#fca5a5" }}>{scheduleErr}</p>}
+
+      <div style={{ display: "grid", gap: 8, marginBottom: 15 }}>
+        {schedules.length === 0 ? (
+          <p style={{ opacity: 0.7 }}>No schedulers created yet.</p>
+        ) : (
+          schedules.map((s) => (
+            <div key={s._id} style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 10, background: "rgba(255,255,255,0.04)" }}>
+              <div><strong>{s.frequency}</strong> schedule ({new Date(s.startDate).toISOString().slice(0, 10)} → {new Date(s.endDate).toISOString().slice(0, 10)})</div>
+              <div style={{ fontSize: 13, opacity: 0.72 }}>
+                Active: {s.active ? "Yes" : "No"} | Last run: {s.lastRun ? new Date(s.lastRun).toLocaleString() : "Never"}
+              </div>
+              <button onClick={() => removeSchedule(s._id)} style={{ marginTop: 6 }}>Delete</button>
+            </div>
+          ))
+        )}
+      </div>
 
       {/* ===================== USERS ===================== */}
       <h2 style={{ marginTop: 24 }}>Users</h2>

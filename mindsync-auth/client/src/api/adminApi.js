@@ -30,6 +30,50 @@ export function getAuditLogs() {
   return fetch(`${API_BASE}/admin/logs`, { credentials: "include" }).then(handle);
 }
 
+export function getMoodTrends(start, end) {
+  return fetch(`${API_BASE}/admin/mood-trends?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, {
+    credentials: "include",
+  }).then(handle);
+}
+
+export function getReportSummary(start, end) {
+  return fetch(`${API_BASE}/admin/reports/summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, {
+    credentials: "include",
+  }).then(handle);
+}
+
+export function getReportPdf(start, end) {
+  return fetch(`${API_BASE}/admin/reports/pdf?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, {
+    credentials: "include",
+  }).then(async (res) => {
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.message || "PDF report failed");
+    }
+    return res.blob();
+  });
+}
+
+export function listReportSchedules() {
+  return fetch(`${API_BASE}/admin/reports/schedules`, { credentials: "include" }).then(handle);
+}
+
+export function createReportSchedule({ frequency, startDate, endDate }) {
+  return fetch(`${API_BASE}/admin/reports/schedules`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ frequency, startDate, endDate }),
+  }).then(handle);
+}
+
+export function deleteReportSchedule(id) {
+  return fetch(`${API_BASE}/admin/reports/schedules/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  }).then(handle);
+}
+
 // client/src/api/adminApi.js
 export function assignClinician(patientId, clinicianId) {
   return fetch(`/api/admin/users/${patientId}/assign-clinician`, {

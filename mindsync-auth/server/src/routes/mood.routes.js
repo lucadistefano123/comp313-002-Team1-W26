@@ -132,6 +132,76 @@ router.get(
   }
 );
 
+// GET /api/moods/history/range?start=YYYY-MM-DD&end=YYYY-MM-DD (comparisons across arbitrary ranges)
+router.get(
+  "/history/range",
+  requireAuth,
+  [
+    query("start").isISO8601().withMessage("start date must be YYYY-MM-DD"),
+    query("end").isISO8601().withMessage("end date must be YYYY-MM-DD"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const startDate = new Date(req.query.start);
+    const endDate = new Date(req.query.end);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return res.status(400).json({ message: "Invalid date values provided." });
+    }
+
+    const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+    if (endDay < startDay) {
+      return res.status(400).json({ message: "End date must be the same or after start date." });
+    }
+
+    const maxRangeDays = 365;
+    const periodDays = Math.floor((endDay - startDay) / (1000 * 60 * 60 * 24)) + 1;
+    if (periodDays > maxRangeDays) {
+      return res.status(400).json({ message: "Date range must be 1-365 days." });
+    }
+
+    const today = new Date();
+    const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (startDay > todayLocal || endDay > todayLocal) {
+      return res.status(400).json({ message: "Date range cannot include future days." });
+    }
+
+    const agg = await MoodEntry.aggregate([
+      {
+        $match: {
+          userId: req.user.id,
+          entryDate: { $gte: startDay, $lte: endDay },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$entryDate" } },
+          avg: { $avg: "$rating" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const map = {};
+    agg.forEach((d) => { map[d._id] = Math.round(d.avg * 10) / 10; });
+
+    const result = [];
+    for (let i = 0; i < periodDays; i++) {
+      const d = new Date(startDay);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      result.push({ date: key, avg: map[key] ?? null });
+    }
+
+    res.json({ history: result });
+  }
+);
+
 // GET /api/moods/insights?days=7  (AI-powered mood insights)
 router.get(
   "/insights",

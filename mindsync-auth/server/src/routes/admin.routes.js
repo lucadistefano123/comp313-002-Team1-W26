@@ -16,6 +16,7 @@ const adminController = require("../controllers/admin.controller");
 
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
+const reportController = require("../controllers/report.controller");
 
 if (typeof requireAuth !== "function") {
   throw new Error("requireAuth is not a function. Check auth.middleware.js exports.");
@@ -23,6 +24,74 @@ if (typeof requireAuth !== "function") {
 if (typeof requireAdmin !== "function") {
   throw new Error("requireAdmin is not a function. Check requireAdmin.js exports.");
 }
+
+// ==============================
+// Org-wide mood trends (admin)
+// ==============================
+router.get("/mood-trends", requireAuth, requireAdmin, async (req, res) => {
+  const { start, end } = req.query;
+
+  if (!start || !end) {
+    return res.status(400).json({ message: "start and end are required (YYYY-MM-DD)." });
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return res.status(400).json({ message: "Invalid dates." });
+  }
+
+  const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+  if (endDay < startDay) {
+    return res.status(400).json({ message: "end must be same or after start." });
+  }
+
+  const delta = Math.floor((endDay - startDay) / (1000 * 60 * 60 * 24)) + 1;
+  if (delta > 365) {
+    return res.status(400).json({ message: "max range 365 days." });
+  }
+
+  const today = new Date();
+  const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (endDay > todayDay) {
+    return res.status(400).json({ message: "end cannot be in the future." });
+  }
+
+  const MoodEntry = require("../models/MoodEntry");
+
+  const agg = await MoodEntry.aggregate([
+    {
+      $match: {
+        entryDate: { $gte: startDay, $lte: endDay },
+      },
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$entryDate" } },
+        avg: { $avg: "$rating" },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const map = {};
+  agg.forEach((r) => {
+    map[r._id] = Math.round(r.avg * 10) / 10;
+  });
+
+  const history = [];
+  for (let i = 0; i < delta; i++) {
+    const d = new Date(startDay);
+    d.setDate(startDay.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    history.push({ date: key, avg: map[key] ?? null });
+  }
+
+  res.json({ history });
+});
 
 // ==============================
 // GET all users (admin)
@@ -34,6 +103,16 @@ router.get("/users", requireAuth, requireAdmin, async (req, res) => {
 
   res.json({ users });
 });
+
+// ==============================
+// Organization report endpoints
+// ==============================
+router.get("/reports/summary", requireAuth, requireAdmin, reportController.getReportSummary);
+router.get("/reports/pdf", requireAuth, requireAdmin, reportController.getReportPdf);
+
+router.get("/reports/schedules", requireAuth, requireAdmin, reportController.getSchedules);
+router.post("/reports/schedules", requireAuth, requireAdmin, reportController.createSchedule);
+router.delete("/reports/schedules/:id", requireAuth, requireAdmin, reportController.deleteSchedule);
 
 // ==============================
 // Toggle enable/disable user

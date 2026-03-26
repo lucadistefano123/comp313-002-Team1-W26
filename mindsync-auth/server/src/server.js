@@ -7,6 +7,7 @@ const adminRoutes = require("./routes/admin.routes");
 const flagsRoutes = require("./routes/flags.routes");
 
 const { seedFeatureFlags } = require("./utils/seedFeatureFlags");
+const { runScheduledReports } = require("./controllers/report.controller");
 
 async function start() {
   await connectDB(process.env.MONGO_URI);
@@ -24,6 +25,13 @@ async function start() {
   app.listen(port, () => {
     console.log(`✅ Server running on http://localhost:${port}`);
   });
+
+  // Start a light scheduler to execute pending report jobs
+  setInterval(() => {
+    runScheduledReports().catch((err) => {
+      console.error("Scheduled reports background error", err);
+    });
+  }, 60 * 1000);
 }
 
 start().catch((err) => {
