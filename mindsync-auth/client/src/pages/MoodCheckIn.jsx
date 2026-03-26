@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createMoodEntry, getMoodEntries } from "../api/moodApi";
+import InsightsModal from "../components/InsightsModal";
 
 const TAGS = [
   "stressed", "anxious", "calm", "happy", "sad", "tired",
@@ -29,6 +30,7 @@ export default function MoodCheckIn({ initialNote = "" }) {
   const [err, setErr] = useState("");
   const [days, setDays] = useState(7);
   const [entries, setEntries] = useState([]);
+  const [showInsightsModal, setShowInsightsModal] = useState(false);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
@@ -165,7 +167,23 @@ export default function MoodCheckIn({ initialNote = "" }) {
             ))}
           </div>
         )}
+
+        {entries.length > 0 && (
+          <button
+            onClick={() => setShowInsightsModal(true)}
+            style={styles.insightsBtn}
+          >
+            ✨ View AI Insights
+          </button>
+        )}
       </div>
+
+      <InsightsModal 
+        isOpen={showInsightsModal}
+        onClose={() => setShowInsightsModal(false)}
+        period={days}
+        entries={entries}
+      />
     </div>
   );
 }
@@ -241,5 +259,17 @@ const styles = {
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(255,255,255,0.06)",
+  },
+  insightsBtn: {
+    marginTop: 16,
+    padding: "12px 20px",
+    borderRadius: 12,
+    border: "1px solid rgba(192,132,252,0.4)",
+    background: "linear-gradient(135deg, rgba(192,132,252,0.2) 0%, rgba(168,85,247,0.15) 100%)",
+    color: "#c084fc",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+    transition: "all 0.3s ease",
   }
 };
