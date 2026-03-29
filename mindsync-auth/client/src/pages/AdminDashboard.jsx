@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getUsers,
   toggleUser,
   setUserRole,
   getAuditLogs,
   getMoodTrends,
+  getSystemMetrics,
   getReportSummary,
   getReportPdf,
   listReportSchedules,
@@ -39,6 +40,15 @@ export default function AdminDashboard() {
   const [trendData, setTrendData] = useState([]);
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState("");
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsError, setMetricsError] = useState("");
+  const [systemMetrics, setSystemMetrics] = useState({
+    range: { start: "", end: "" },
+    totals: { loginFrequency: 0, featureUsage: 0, errorCount: 0 },
+    daily: { loginFrequency: [], featureUsage: [], errorCount: [] },
+    featureUsageByKey: [],
+    errorCountByCategory: [],
+  });
 
   const [scheduleFrequency, setScheduleFrequency] = useState("weekly");
   const [scheduleStart, setScheduleStart] = useState(dateToInput(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
@@ -58,6 +68,7 @@ export default function AdminDashboard() {
     const f = await getFlags();
     setFeatureFlags(f || []);
     await loadMoodTrends(trendStart, trendEnd);
+    await loadSystemMetrics(trendStart, trendEnd);
     await loadSchedules();
   }
 
@@ -73,6 +84,36 @@ export default function AdminDashboard() {
     } finally {
       setTrendLoading(false);
     }
+  }
+
+  async function loadSystemMetrics(start, end) {
+    setMetricsError("");
+    setMetricsLoading(true);
+    try {
+      const data = await getSystemMetrics(start, end);
+      setSystemMetrics({
+        range: data.range || { start, end },
+        totals: data.totals || { loginFrequency: 0, featureUsage: 0, errorCount: 0 },
+        daily: data.daily || { loginFrequency: [], featureUsage: [], errorCount: [] },
+        featureUsageByKey: data.featureUsageByKey || [],
+        errorCountByCategory: data.errorCountByCategory || [],
+      });
+    } catch (e) {
+      setMetricsError(e?.message || "Failed to load system metrics");
+      setSystemMetrics({
+        range: { start, end },
+        totals: { loginFrequency: 0, featureUsage: 0, errorCount: 0 },
+        daily: { loginFrequency: [], featureUsage: [], errorCount: [] },
+        featureUsageByKey: [],
+        errorCountByCategory: [],
+      });
+    } finally {
+      setMetricsLoading(false);
+    }
+  }
+
+  async function applyAnalyticsRange(start, end) {
+    await Promise.all([loadMoodTrends(start, end), loadSystemMetrics(start, end)]);
   }
 
   async function loadSchedules() {
@@ -94,7 +135,7 @@ export default function AdminDashboard() {
     const endStr = dateToInput(endDate);
     setTrendStart(startStr);
     setTrendEnd(endStr);
-    loadMoodTrends(startStr, endStr);
+    applyAnalyticsRange(startStr, endStr);
   }
 
   useEffect(() => {
@@ -244,10 +285,67 @@ export default function AdminDashboard() {
           onChange={(e) => setTrendEnd(e.target.value)}
           style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
         />
-        <button onClick={() => loadMoodTrends(trendStart, trendEnd)} style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}>
+        <button onClick={() => applyAnalyticsRange(trendStart, trendEnd)} style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}>
           Apply
         </button>
       </div>
+
+      <h2 style={{ marginTop: 20 }}>System Usage Metrics</h2>
+      {metricsError && <p style={{ color: "#fca5a5" }}>{metricsError}</p>}
+      {metricsLoading ? (
+        <p>Loading metrics…</p>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
+            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+              <div style={{ fontSize: 13, opacity: 0.75 }}>Login Frequency</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.loginFrequency || 0}</div>
+            </div>
+            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+              <div style={{ fontSize: 13, opacity: 0.75 }}>Feature Usage</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.featureUsage || 0}</div>
+            </div>
+            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+              <div style={{ fontSize: 13, opacity: 0.75 }}>System Errors</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.errorCount || 0}</div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10, marginBottom: 16 }}>
+            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+              <h3 style={{ marginTop: 0 }}>Feature Usage By Key</h3>
+              {systemMetrics.featureUsageByKey.length === 0 ? (
+                <p style={{ margin: 0, opacity: 0.72 }}>No feature usage in this range (0).</p>
+              ) : (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {systemMetrics.featureUsageByKey.map((item) => (
+                    <div key={item.featureKey} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <span>{item.featureKey}</span>
+                      <b>{item.count}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+              <h3 style={{ marginTop: 0 }}>Error Count By Category</h3>
+              {systemMetrics.errorCountByCategory.length === 0 ? (
+                <p style={{ margin: 0, opacity: 0.72 }}>No system errors in this range (0).</p>
+              ) : (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {systemMetrics.errorCountByCategory.map((item) => (
+                    <div key={item.category} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <span>{item.category}</span>
+                      <b>{item.count}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {trendError && <p style={{ color: "#fca5a5" }}>{trendError}</p>}
       {trendLoading ? (

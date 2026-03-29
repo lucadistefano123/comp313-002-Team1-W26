@@ -17,6 +17,10 @@ const adminController = require("../controllers/admin.controller");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const reportController = require("../controllers/report.controller");
+const {
+  normalizeDateInput,
+  getSystemMetricsSummary,
+} = require("../services/metrics.service");
 
 if (typeof requireAuth !== "function") {
   throw new Error("requireAuth is not a function. Check auth.middleware.js exports.");
@@ -91,6 +95,41 @@ router.get("/mood-trends", requireAuth, requireAdmin, async (req, res) => {
   }
 
   res.json({ history });
+});
+
+// ==============================
+// System metrics summary (admin)
+// ==============================
+router.get("/metrics", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { start, end } = req.query;
+
+    const startDay = start ? normalizeDateInput(start) : null;
+    const endDay = end ? normalizeDateInput(end) : null;
+
+    if (start && !startDay) {
+      return res.status(400).json({ message: "Invalid start date." });
+    }
+    if (end && !endDay) {
+      return res.status(400).json({ message: "Invalid end date." });
+    }
+    if (startDay && endDay && endDay < startDay) {
+      return res.status(400).json({ message: "end must be same or after start." });
+    }
+
+    if (startDay && endDay) {
+      const delta = Math.floor((endDay - startDay) / (1000 * 60 * 60 * 24)) + 1;
+      if (delta > 365) {
+        return res.status(400).json({ message: "max range 365 days." });
+      }
+    }
+
+    const summary = await getSystemMetricsSummary(start, end);
+    return res.json(summary);
+  } catch (err) {
+    console.error("System metrics error", err);
+    return res.status(500).json({ message: "Failed to load system metrics." });
+  }
 });
 
 // ==============================

@@ -36,6 +36,12 @@ export function getMoodTrends(start, end) {
   }).then(handle);
 }
 
+export function getSystemMetrics(start, end) {
+  return fetch(`${API_BASE}/admin/metrics?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, {
+    credentials: "include",
+  }).then(handle);
+}
+
 export function getReportSummary(start, end) {
   return fetch(`${API_BASE}/admin/reports/summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`, {
     credentials: "include",
