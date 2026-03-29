@@ -6,7 +6,6 @@ import {
   getAuditLogs,
   getMoodTrends,
   getSystemMetrics,
-  getReportSummary,
   getReportPdf,
   listReportSchedules,
   createReportSchedule,
@@ -31,7 +30,7 @@ export default function AdminDashboard() {
   const [featureFlags, setFeatureFlags] = useState([]);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("analytics");
 
   const today = new Date();
   const dateToInput = (date) => date.toISOString().slice(0, 10);
@@ -256,179 +255,26 @@ export default function AdminDashboard() {
       {msg && <p style={{ color: "#3ddc97" }}>✅ {msg}</p>}
       {err && <p style={{ color: "#ff4d4f" }}>❌ {err}</p>}
 
-      {/* ===================== ORGANIZATION MOOD TRENDS ===================== */}
-      <h2 style={{ marginTop: 24 }}>Organization Mood Trends</h2>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-        <label style={{ fontSize: 13, opacity: 0.7 }}>Range</label>
-        <select value={trendStart === null ? "" : 7} style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }} readOnly>
-          <option>Custom</option>
-        </select>
-        <button onClick={() => setTrendPreset(7)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 7 days</button>
-        <button onClick={() => setTrendPreset(30)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 30 days</button>
-        <button onClick={() => setTrendPreset(90)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 90 days</button>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <input
-          data-testid="admin-trend-start"
-          type="date"
-          value={trendStart}
-          onChange={(e) => setTrendStart(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
-        />
-        <span style={{ color: "rgba(255,255,255,0.7)"}}>→</span>
-        <input
-          data-testid="admin-trend-end"
-          type="date"
-          value={trendEnd}
-          onChange={(e) => setTrendEnd(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
-        />
-        <button onClick={() => applyAnalyticsRange(trendStart, trendEnd)} style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}>
-          Apply
-        </button>
-      </div>
-
-      <h2 style={{ marginTop: 20 }}>System Usage Metrics</h2>
-      {metricsError && <p style={{ color: "#fca5a5" }}>{metricsError}</p>}
-      {metricsLoading ? (
-        <p>Loading metrics…</p>
-      ) : (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
-            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
-              <div style={{ fontSize: 13, opacity: 0.75 }}>Login Frequency</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.loginFrequency || 0}</div>
-            </div>
-            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
-              <div style={{ fontSize: 13, opacity: 0.75 }}>Feature Usage</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.featureUsage || 0}</div>
-            </div>
-            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
-              <div style={{ fontSize: 13, opacity: 0.75 }}>System Errors</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.errorCount || 0}</div>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10, marginBottom: 16 }}>
-            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
-              <h3 style={{ marginTop: 0 }}>Feature Usage By Key</h3>
-              {systemMetrics.featureUsageByKey.length === 0 ? (
-                <p style={{ margin: 0, opacity: 0.72 }}>No feature usage in this range (0).</p>
-              ) : (
-                <div style={{ display: "grid", gap: 6 }}>
-                  {systemMetrics.featureUsageByKey.map((item) => (
-                    <div key={item.featureKey} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <span>{item.featureKey}</span>
-                      <b>{item.count}</b>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
-              <h3 style={{ marginTop: 0 }}>Error Count By Category</h3>
-              {systemMetrics.errorCountByCategory.length === 0 ? (
-                <p style={{ margin: 0, opacity: 0.72 }}>No system errors in this range (0).</p>
-              ) : (
-                <div style={{ display: "grid", gap: 6 }}>
-                  {systemMetrics.errorCountByCategory.map((item) => (
-                    <div key={item.category} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <span>{item.category}</span>
-                      <b>{item.count}</b>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {trendError && <p style={{ color: "#fca5a5" }}>{trendError}</p>}
-      {trendLoading ? (
-        <p>Loading trend data…</p>
-      ) : (
-        <div style={{ width: "100%", height: 300 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trendData} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="date" stroke="rgba(255,255,255,0.6)" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
-              <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} stroke="rgba(255,255,255,0.6)" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
-              <Tooltip />
-              <Legend />
-              <ReferenceLine y={5} stroke="rgba(255,255,255,0.3)" strokeDasharray="4 4" />
-              <Line type="monotone" dataKey="avg" stroke="#c084fc" strokeWidth={2} dot={false} name="Org average" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* ===================== SCHEDULED SUMMARY REPORTS ===================== */}
-      <h2 style={{ marginTop: 26 }}>Scheduled Summary Reports</h2>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
-        <select
-          value={scheduleFrequency}
-          onChange={(e) => setScheduleFrequency(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
-        >
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-
-        <input
-          type="date"
-          value={scheduleStart}
-          onChange={(e) => setScheduleStart(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
-        />
-        <span>→</span>
-        <input
-          type="date"
-          value={scheduleEnd}
-          onChange={(e) => setScheduleEnd(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
-        />
-
-        <button
-          onClick={createSchedule}
-          style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}
-        >
-          Schedule Report
-        </button>
-
-        <button
-          onClick={exportPdf}
-          style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#0ea5e9", border: "none", color: "white" }}
-        >
-          Generate PDF Now
-        </button>
-      </div>
-
-      {scheduleMsg && <p style={{ color: "#a3e635" }}>{scheduleMsg}</p>}
-      {scheduleErr && <p style={{ color: "#fca5a5" }}>{scheduleErr}</p>}
-
-      <div style={{ display: "grid", gap: 8, marginBottom: 15 }}>
-        {schedules.length === 0 ? (
-          <p style={{ opacity: 0.7 }}>No schedulers created yet.</p>
-        ) : (
-          schedules.map((s) => (
-            <div key={s._id} style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 10, background: "rgba(255,255,255,0.04)" }}>
-              <div><strong>{s.frequency}</strong> schedule ({new Date(s.startDate).toISOString().slice(0, 10)} → {new Date(s.endDate).toISOString().slice(0, 10)})</div>
-              <div style={{ fontSize: 13, opacity: 0.72 }}>
-                Active: {s.active ? "Yes" : "No"} | Last run: {s.lastRun ? new Date(s.lastRun).toLocaleString() : "Never"}
-              </div>
-              <button onClick={() => removeSchedule(s._id)} style={{ marginTop: 6 }}>Delete</button>
-            </div>
-          ))
-        )}
-      </div>
-
       {/* ===================== TABS ===================== */}
       <div style={styles.tabsContainer}>
+        <button
+          onClick={() => setActiveTab("analytics")}
+          style={{
+            ...styles.tabButton,
+            ...(activeTab === "analytics" ? styles.tabButtonActive : styles.tabButtonInactive)
+          }}
+        >
+          Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab("reports")}
+          style={{
+            ...styles.tabButton,
+            ...(activeTab === "reports" ? styles.tabButtonActive : styles.tabButtonInactive)
+          }}
+        >
+          Reports
+        </button>
         <button
           onClick={() => setActiveTab("users")}
           style={{
@@ -457,6 +303,185 @@ export default function AdminDashboard() {
           Audit Logs
         </button>
       </div>
+
+      {/* ===================== ANALYTICS TAB ===================== */}
+      {activeTab === "analytics" && (
+        <div style={styles.tabContent}>
+          <h2>Organization Mood Trends</h2>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <label style={{ fontSize: 13, opacity: 0.7 }}>Range</label>
+            <select value={trendStart === null ? "" : 7} style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }} readOnly>
+              <option>Custom</option>
+            </select>
+            <button onClick={() => setTrendPreset(7)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 7 days</button>
+            <button onClick={() => setTrendPreset(30)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 30 days</button>
+            <button onClick={() => setTrendPreset(90)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 90 days</button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <input
+              data-testid="admin-trend-start"
+              type="date"
+              value={trendStart}
+              onChange={(e) => setTrendStart(e.target.value)}
+              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+            />
+            <span style={{ color: "rgba(255,255,255,0.7)"}}>→</span>
+            <input
+              data-testid="admin-trend-end"
+              type="date"
+              value={trendEnd}
+              onChange={(e) => setTrendEnd(e.target.value)}
+              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+            />
+            <button onClick={() => applyAnalyticsRange(trendStart, trendEnd)} style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}>
+              Apply
+            </button>
+          </div>
+
+          {trendError && <p style={{ color: "#fca5a5" }}>{trendError}</p>}
+          {trendLoading ? (
+            <p>Loading trend data…</p>
+          ) : (
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                  <XAxis dataKey="date" stroke="rgba(255,255,255,0.6)" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
+                  <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} stroke="rgba(255,255,255,0.6)" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
+                  <Tooltip />
+                  <Legend />
+                  <ReferenceLine y={5} stroke="rgba(255,255,255,0.3)" strokeDasharray="4 4" />
+                  <Line type="monotone" dataKey="avg" stroke="#c084fc" strokeWidth={2} dot={false} name="Org average" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          <h3 style={{ marginTop: 20 }}>System Usage Metrics</h3>
+          {metricsError && <p style={{ color: "#fca5a5" }}>{metricsError}</p>}
+          {metricsLoading ? (
+            <p>Loading metrics…</p>
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
+                <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+                  <div style={{ fontSize: 13, opacity: 0.75 }}>Login Frequency</div>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.loginFrequency || 0}</div>
+                </div>
+                <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+                  <div style={{ fontSize: 13, opacity: 0.75 }}>Feature Usage</div>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.featureUsage || 0}</div>
+                </div>
+                <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+                  <div style={{ fontSize: 13, opacity: 0.75 }}>System Errors</div>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{systemMetrics.totals.errorCount || 0}</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10, marginBottom: 16 }}>
+                <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+                  <h3 style={{ marginTop: 0 }}>Feature Usage By Key</h3>
+                  {systemMetrics.featureUsageByKey.length === 0 ? (
+                    <p style={{ margin: 0, opacity: 0.72 }}>No feature usage in this range (0).</p>
+                  ) : (
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {systemMetrics.featureUsageByKey.map((item) => (
+                        <div key={item.featureKey} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <span>{item.featureKey}</span>
+                          <b>{item.count}</b>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 12, background: "rgba(0,0,0,0.18)" }}>
+                  <h3 style={{ marginTop: 0 }}>Error Count By Category</h3>
+                  {systemMetrics.errorCountByCategory.length === 0 ? (
+                    <p style={{ margin: 0, opacity: 0.72 }}>No system errors in this range (0).</p>
+                  ) : (
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {systemMetrics.errorCountByCategory.map((item) => (
+                        <div key={item.category} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <span>{item.category}</span>
+                          <b>{item.count}</b>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ===================== REPORTS TAB ===================== */}
+      {activeTab === "reports" && (
+        <div style={styles.tabContent}>
+          <h2>Scheduled Summary Reports</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+            <select
+              value={scheduleFrequency}
+              onChange={(e) => setScheduleFrequency(e.target.value)}
+              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+
+            <input
+              type="date"
+              value={scheduleStart}
+              onChange={(e) => setScheduleStart(e.target.value)}
+              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+            />
+            <span>→</span>
+            <input
+              type="date"
+              value={scheduleEnd}
+              onChange={(e) => setScheduleEnd(e.target.value)}
+              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }}
+            />
+
+            <button
+              onClick={createSchedule}
+              style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#4f46e5", border: "none", color: "white" }}
+            >
+              Schedule Report
+            </button>
+
+            <button
+              onClick={exportPdf}
+              style={{ padding: "8px 12px", borderRadius: 12, backgroundColor: "#0ea5e9", border: "none", color: "white" }}
+            >
+              Generate PDF Now
+            </button>
+          </div>
+
+          {scheduleMsg && <p style={{ color: "#a3e635" }}>{scheduleMsg}</p>}
+          {scheduleErr && <p style={{ color: "#fca5a5" }}>{scheduleErr}</p>}
+
+          <div style={{ display: "grid", gap: 8, marginBottom: 15 }}>
+            {schedules.length === 0 ? (
+              <p style={{ opacity: 0.7 }}>No schedulers created yet.</p>
+            ) : (
+              schedules.map((s) => (
+                <div key={s._id} style={{ border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 10, background: "rgba(255,255,255,0.04)" }}>
+                  <div><strong>{s.frequency}</strong> schedule ({new Date(s.startDate).toISOString().slice(0, 10)} → {new Date(s.endDate).toISOString().slice(0, 10)})</div>
+                  <div style={{ fontSize: 13, opacity: 0.72 }}>
+                    Active: {s.active ? "Yes" : "No"} | Last run: {s.lastRun ? new Date(s.lastRun).toLocaleString() : "Never"}
+                  </div>
+                  <button onClick={() => removeSchedule(s._id)} style={{ marginTop: 6 }}>Delete</button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===================== USERS TAB ===================== */}
       {activeTab === "users" && (
