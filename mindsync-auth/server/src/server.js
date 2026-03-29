@@ -5,6 +5,7 @@ const connectDB = require("./config/db");
 
 const adminRoutes = require("./routes/admin.routes");
 const flagsRoutes = require("./routes/flags.routes");
+const { createFeatureUsageTracker } = require("./middleware/metrics.middleware");
 
 const { seedFeatureFlags } = require("./utils/seedFeatureFlags");
 const { runScheduledReports } = require("./controllers/report.controller");
@@ -18,8 +19,8 @@ async function start() {
 
   const app = createApp();
 
-  app.use("/api/admin", adminRoutes);
-  app.use("/api/flags", flagsRoutes);
+  app.use("/api/admin", createFeatureUsageTracker("admin"), adminRoutes);
+  app.use("/api/flags", createFeatureUsageTracker("feature_flags"), flagsRoutes);
 
   const port = process.env.PORT || 5000;
   app.listen(port, () => {

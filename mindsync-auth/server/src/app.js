@@ -8,6 +8,7 @@ const clinicianRoutes = require("./routes/clinician.routes");
 const authRoutes = require("./routes/auth.routes");
 const moodRoutes = require("./routes/mood.routes");
 const exportRoutes = require("./routes/export.routes");
+const { createFeatureUsageTracker } = require("./middleware/metrics.middleware");
 
 function createApp() {
   const app = express();
@@ -50,9 +51,9 @@ function createApp() {
   });
 
   app.use("/api/auth", authRoutes);
-  app.use("/api/moods", moodRoutes);
-  app.use("/api/export", exportLimiter, exportRoutes);
-  app.use("/api/clinician", clinicianRoutes);
+  app.use("/api/moods", createFeatureUsageTracker("moods"), moodRoutes);
+  app.use("/api/export", exportLimiter, createFeatureUsageTracker("export"), exportRoutes);
+  app.use("/api/clinician", createFeatureUsageTracker("clinician"), clinicianRoutes);
 
   // =============================
   // REACT STATIC BUILD

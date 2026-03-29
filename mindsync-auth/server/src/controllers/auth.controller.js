@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 const User = require("../models/User");
+const { trackLoginSuccess } = require("../services/metrics.service");
 
 function signToken(user) {
   return jwt.sign(
@@ -83,6 +84,10 @@ exports.login = async (req, res) => {
 
   const token = signToken(user);
   setAuthCookie(res, token);
+
+  trackLoginSuccess().catch((err) => {
+    console.error("Login metric failed", err.message);
+  });
 
   return res.json({
     user: { id: user._id, fullName: user.fullName, email: user.email, role: user.role },
