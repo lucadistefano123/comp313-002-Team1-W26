@@ -49,3 +49,19 @@ Use these only for local testing if you want role assignment during registration
 - Auth token is stored in an HTTP-only cookie (`token`).
 - Global and export-specific rate limiting are enabled.
 - Helmet security headers are enabled.
+
+## System Metrics Scope
+
+The platform admin system metrics are intentionally aggregate-only and privacy-safe.
+
+- `login_frequency`: count of successful logins per day
+- `feature_usage`: count of feature interactions per day, grouped by feature key
+- `error_count`: count of server-side errors per day, grouped by error category
+
+Privacy constraints for all metrics:
+
+- No user-identifiable fields (no `userId`, `email`, `fullName`, token, or request payload)
+- No raw IP address or raw user agent storage
+- API responses must return only aggregated counts and categories
+
+Canonical code definitions live in `src/metrics/metricDefinitions.js`.
