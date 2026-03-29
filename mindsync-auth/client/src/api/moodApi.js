@@ -32,3 +32,16 @@ export async function getMoodHistory(days = 7) {
   if (!res.ok) throw new Error(data?.message || "Failed to load mood history");
   return data;
 }
+
+export async function getMoodHistoryRange(start, end) {
+  const res = await fetch(
+    `${API_BASE}/moods/history/range?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+    {
+      credentials: "include",
+    }
+  );
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Failed to load mood history range");
+  return data;
+}
