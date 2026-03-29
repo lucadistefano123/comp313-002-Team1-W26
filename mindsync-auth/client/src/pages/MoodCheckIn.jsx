@@ -262,6 +262,7 @@ const styles = {
   },
   insightsBtn: {
     marginTop: 16,
+    width: "100%",
     padding: "12px 20px",
     borderRadius: 12,
     border: "1px solid rgba(192,132,252,0.4)",

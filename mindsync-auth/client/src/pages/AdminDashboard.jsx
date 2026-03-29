@@ -310,10 +310,6 @@ export default function AdminDashboard() {
           <h2>Organization Mood Trends</h2>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-            <label style={{ fontSize: 13, opacity: 0.7 }}>Range</label>
-            <select value={trendStart === null ? "" : 7} style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "rgba(0,0,0,0.18)", color: "inherit" }} readOnly>
-              <option>Custom</option>
-            </select>
             <button onClick={() => setTrendPreset(7)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 7 days</button>
             <button onClick={() => setTrendPreset(30)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 30 days</button>
             <button onClick={() => setTrendPreset(90)} style={{ padding: "8px 10px", borderRadius: 12 }}>Last 90 days</button>
