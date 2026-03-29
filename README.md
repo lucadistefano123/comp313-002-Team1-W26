@@ -66,7 +66,7 @@ From `mindsync-auth`:
 - `/api/auth`: register, login, me, logout
 - `/api/moods`: create/check history
 - `/api/clinician`: patient assignment and notes
-- `/api/admin`: user management, role changes, audit logs
+- `/api/admin`: user management, role changes, audit logs, system metrics
 - `/api/flags`: feature flags
 - `/api/export`: user export
 
@@ -75,3 +75,13 @@ From `mindsync-auth`:
 - Auth uses an HTTP-only cookie named `token`.
 - Feature flags are seeded on server startup.
 - In production mode, backend serves the built frontend from `client/dist`.
+
+## Platform Metrics (Admin)
+
+Platform administrators can monitor aggregate system usage metrics for stability and performance.
+
+- Login frequency
+- Feature usage
+- System error counts
+
+The detailed backend contract, privacy constraints, endpoint behavior, and tests are documented in `mindsync-auth/server/README.md` under System Metrics sections.
