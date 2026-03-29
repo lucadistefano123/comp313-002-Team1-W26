@@ -9,6 +9,7 @@ const authRoutes = require("./routes/auth.routes");
 const moodRoutes = require("./routes/mood.routes");
 const exportRoutes = require("./routes/export.routes");
 const { createFeatureUsageTracker } = require("./middleware/metrics.middleware");
+const { createSystemErrorMetricsLogger } = require("./middleware/errorMetrics.middleware");
 
 function createApp() {
   const app = express();
@@ -37,6 +38,8 @@ function createApp() {
       max: 300,
     })
   );
+
+  app.use(createSystemErrorMetricsLogger());
 
   const exportLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,

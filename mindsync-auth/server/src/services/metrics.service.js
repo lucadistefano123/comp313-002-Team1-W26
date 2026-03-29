@@ -30,6 +30,13 @@ async function trackFeatureUsage(featureKey) {
   });
 }
 
+async function trackSystemError(category = "unknown") {
+  await trackEvent({
+    eventType: METRIC_EVENT_TYPES.SYSTEM_ERROR,
+    category,
+  });
+}
+
 function normalizeDateInput(dateStr) {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -137,6 +144,7 @@ module.exports = {
   trackEvent,
   trackLoginSuccess,
   trackFeatureUsage,
+  trackSystemError,
   normalizeDateInput,
   getSystemMetricsSummary,
 };
