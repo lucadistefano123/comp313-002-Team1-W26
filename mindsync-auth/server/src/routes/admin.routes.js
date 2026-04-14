@@ -22,6 +22,8 @@ const {
   getSystemMetricsSummary,
 } = require("../services/metrics.service");
 
+const AGGREGATION_ANONYMITY_THRESHOLD = 5;
+
 if (typeof requireAuth !== "function") {
   throw new Error("requireAuth is not a function. Check auth.middleware.js exports.");
 }
@@ -82,7 +84,13 @@ router.get("/mood-trends", requireAuth, requireAdmin, async (req, res) => {
   ]);
 
   const map = {};
+  let suppressedDays = 0;
   agg.forEach((r) => {
+    if (r.count < AGGREGATION_ANONYMITY_THRESHOLD) {
+      map[r._id] = null;
+      suppressedDays += 1;
+      return;
+    }
     map[r._id] = Math.round(r.avg * 10) / 10;
   });
 
@@ -94,7 +102,18 @@ router.get("/mood-trends", requireAuth, requireAdmin, async (req, res) => {
     history.push({ date: key, avg: map[key] ?? null });
   }
 
-  res.json({ history });
+  res.json({
+    history,
+    anonymity: {
+      threshold: AGGREGATION_ANONYMITY_THRESHOLD,
+      suppressedDays,
+    },
+  });
+});
+
+// Raw export is intentionally blocked for org-wide trend analytics.
+router.get("/mood-trends/export", requireAuth, requireAdmin, async (_req, res) => {
+  return res.status(403).json({ message: "Raw mood trend export is disabled. Only aggregated reports are available." });
 });
 
 // ==============================
@@ -151,6 +170,7 @@ router.get("/reports/pdf", requireAuth, requireAdmin, reportController.getReport
 
 router.get("/reports/schedules", requireAuth, requireAdmin, reportController.getSchedules);
 router.post("/reports/schedules", requireAuth, requireAdmin, reportController.createSchedule);
+router.get("/reports/schedules/:id/pdf", requireAuth, requireAdmin, reportController.getSchedulePdf);
 router.delete("/reports/schedules/:id", requireAuth, requireAdmin, reportController.deleteSchedule);
 
 // ==============================

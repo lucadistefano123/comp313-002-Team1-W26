@@ -80,6 +80,18 @@ export function deleteReportSchedule(id) {
   }).then(handle);
 }
 
+export function getScheduleReportPdf(id) {
+  return fetch(`${API_BASE}/admin/reports/schedules/${id}/pdf`, {
+    credentials: "include",
+  }).then(async (res) => {
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.message || "Schedule PDF report failed");
+    }
+    return res.blob();
+  });
+}
+
 // client/src/api/adminApi.js
 export function assignClinician(patientId, clinicianId) {
   return fetch(`/api/admin/users/${patientId}/assign-clinician`, {

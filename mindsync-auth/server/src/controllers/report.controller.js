@@ -2,6 +2,8 @@ const PDFDocument = require("pdfkit");
 const MoodEntry = require("../models/MoodEntry");
 const ReportSchedule = require("../models/ReportSchedule");
 
+const AGGREGATION_ANONYMITY_THRESHOLD = 5;
+
 function safeDate(value) {
   return value ? new Date(value) : null;
 }
@@ -37,8 +39,14 @@ async function buildSummaryData(start, end) {
   ]);
 
   const bucket = {};
+  let suppressedDays = 0;
   agg.forEach((r) => {
-    bucket[r._id] = { avgRating: Math.round(r.avgRating * 10) / 10, count: r.count };
+    if (r.count < AGGREGATION_ANONYMITY_THRESHOLD) {
+      bucket[r._id] = { avgRating: null, count: r.count, suppressed: true };
+      suppressedDays += 1;
+      return;
+    }
+    bucket[r._id] = { avgRating: Math.round(r.avgRating * 10) / 10, count: r.count, suppressed: false };
   });
 
   const days = [];
@@ -55,6 +63,7 @@ async function buildSummaryData(start, end) {
       date: key,
       avg: bucket[key]?.avgRating ?? null,
       count: bucket[key]?.count ?? 0,
+      suppressed: Boolean(bucket[key]?.suppressed),
     });
   }
 
@@ -66,6 +75,8 @@ async function buildSummaryData(start, end) {
     totalEntries: totalCount,
     overallAvg,
     daily: days,
+    suppressedDays,
+    anonymityThreshold: AGGREGATION_ANONYMITY_THRESHOLD,
   };
 }
 
@@ -110,13 +121,22 @@ exports.getReportPdf = async (req, res) => {
 
     doc.fontSize(11).text(`Total entries: ${summary.totalEntries}`);
     doc.fontSize(11).text(`Average rating: ${summary.overallAvg ?? "N/A"}/10`);
+    if (summary.totalEntries === 0) {
+      doc.fontSize(11).text("Notice: No data available for this reporting window.");
+    }
+    if (summary.suppressedDays > 0) {
+      doc
+        .fontSize(11)
+        .text(`Notice: ${summary.suppressedDays} day(s) were suppressed to enforce anonymity threshold (${summary.anonymityThreshold}).`);
+    }
     doc.moveDown(0.6);
 
     doc.fontSize(11).text("Daily trend (average mood):");
     doc.moveDown(0.3);
 
     summary.daily.forEach((d) => {
-      doc.fontSize(10).text(`${d.date}: ${d.avg !== null ? d.avg : "no data"} (count ${d.count})`);
+      const value = d.suppressed ? "suppressed for anonymity" : d.avg !== null ? d.avg : "no data";
+      doc.fontSize(10).text(`${d.date}: ${value} (count ${d.count})`);
     });
 
     doc.end();
@@ -142,8 +162,8 @@ exports.createSchedule = async (req, res) => {
     const adminId = req.user?.id || req.user?._id;
     const { frequency, startDate, endDate } = req.body;
 
-    if (!["daily", "weekly", "monthly"].includes(frequency)) {
-      return res.status(400).json({ message: "frequency must be daily, weekly, or monthly." });
+    if (!["daily", "weekly", "monthly", "quarterly"].includes(frequency)) {
+      return res.status(400).json({ message: "frequency must be daily, weekly, monthly, or quarterly." });
     }
 
     const start = normalizeDateInput(startDate);
@@ -177,6 +197,53 @@ exports.deleteSchedule = async (req, res) => {
   }
 };
 
+exports.getSchedulePdf = async (req, res) => {
+  try {
+    const adminId = req.user?.id || req.user?._id;
+    const { id } = req.params;
+
+    const schedule = await ReportSchedule.findOne({ _id: id, adminId }).lean();
+    if (!schedule) return res.status(404).json({ message: "Schedule not found." });
+
+    const summary = await buildSummaryData(schedule.startDate, schedule.endDate);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="mindsync-schedule-${schedule._id}-${summary.start}-${summary.end}.pdf"`
+    );
+
+    const doc = new PDFDocument({ margin: 40 });
+    doc.pipe(res);
+
+    doc.fontSize(18).text("MindSync Scheduled Wellness Report", { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Schedule: ${schedule.frequency}`);
+    doc.fontSize(10).text(`Window: ${summary.start} to ${summary.end}`);
+    doc.fontSize(10).text(`Total entries: ${summary.totalEntries}`);
+    doc.fontSize(10).text(`Average rating: ${summary.overallAvg ?? "N/A"}/10`);
+    if (summary.totalEntries === 0) {
+      doc.fontSize(10).text("Notice: No data available for this reporting window.");
+    }
+    if (summary.suppressedDays > 0) {
+      doc
+        .fontSize(10)
+        .text(`Notice: ${summary.suppressedDays} day(s) suppressed for anonymity threshold (${summary.anonymityThreshold}).`);
+    }
+    doc.moveDown(0.5);
+
+    summary.daily.forEach((d) => {
+      const value = d.suppressed ? "suppressed for anonymity" : d.avg !== null ? d.avg : "no data";
+      doc.fontSize(9).text(`${d.date}: ${value} (count ${d.count})`);
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error("Schedule PDF error", err);
+    res.status(500).json({ message: "Server error generating schedule PDF." });
+  }
+};
+
 function addDays(date, numDays) {
   const d = new Date(date);
   d.setDate(d.getDate() + numDays);
@@ -200,6 +267,11 @@ function shouldRun(schedule) {
     m.setMonth(m.getMonth() + 1);
     return now >= m;
   }
+  if (schedule.frequency === "quarterly") {
+    const q = new Date(nextRun);
+    q.setMonth(q.getMonth() + 3);
+    return now >= q;
+  }
   return false;
 }
 
@@ -221,9 +293,20 @@ exports.runScheduledReports = async () => {
         });
 
         schedule.lastRun = new Date();
+        schedule.lastReportTotalEntries = summary.totalEntries;
+        schedule.lastReportStatus = summary.totalEntries > 0 ? "ready" : "empty";
+        schedule.lastReportNotice = summary.totalEntries > 0
+          ? summary.suppressedDays > 0
+            ? `Generated with ${summary.suppressedDays} suppressed day(s) to enforce anonymity threshold.`
+            : "Generated successfully."
+          : "Generated with no data for the reporting window.";
         await schedule.save();
       } catch (e) {
         console.error("Failed to execute scheduled report", schedule._id, e);
+        schedule.lastRun = new Date();
+        schedule.lastReportStatus = "failed";
+        schedule.lastReportNotice = "Scheduled generation failed. Check server logs.";
+        await schedule.save();
       }
     }
   } catch (err) {

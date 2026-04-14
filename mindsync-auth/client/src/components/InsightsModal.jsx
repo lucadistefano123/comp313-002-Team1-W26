@@ -1,11 +1,28 @@
 import { useMemo } from "react";
 
+const MIN_ENTRIES_FOR_INSIGHTS = 3;
+const INSIGHTS_DISCLAIMER = "These insights are descriptive only and are not medical advice.";
+
 export default function InsightsModal({ isOpen, onClose, period = 7, entries = [] }) {
   const insights = useMemo(() => {
     if (!entries || entries.length === 0) {
       return {
-        summary: {},
+        summary: {
+          period: `Last ${period} days`,
+        },
         insights: "No entries yet. Log moods for a quick summary and suggestions.",
+        disclaimer: INSIGHTS_DISCLAIMER,
+      };
+    }
+
+    if (entries.length < MIN_ENTRIES_FOR_INSIGHTS) {
+      return {
+        summary: {
+          totalEntries: entries.length,
+          period: `Last ${period} days`,
+        },
+        insights: `Not enough data yet for a reliable pattern summary. Add at least ${MIN_ENTRIES_FOR_INSIGHTS} entries to improve insight quality.`,
+        disclaimer: INSIGHTS_DISCLAIMER,
       };
     }
 
@@ -49,7 +66,14 @@ export default function InsightsModal({ isOpen, onClose, period = 7, entries = [
       ? "Keep up the good progress; maintain routines that support energy and rest."
       : "Great mood overall! Celebrate small wins and keep self-care habits strong.";
 
+    const hasMixedMoodSignals = ratings.some((r) => r <= 4) && ratings.some((r) => r >= 7);
+    const mixedMoodLine = hasMixedMoodSignals
+      ? "Your entries show both challenging and stronger periods, suggesting a mixed but understandable emotional pattern."
+      : "";
+
     const computedInsights = `In the last ${period} days, your average mood is ${avgRating}/10, range ${minRating}-${maxRating}. You appear ${trend}. ${moodChangeAlert || ""}
+
+${mixedMoodLine}
 
 Top feelings: ${topEmotions.map((e) => `${e.tag} (${e.count})`).join(", ")}.
 
@@ -68,6 +92,7 @@ Suggested action: ${suggestion}`;
         period: `Last ${period} days`,
       },
       insights: computedInsights,
+      disclaimer: INSIGHTS_DISCLAIMER,
     };
   }, [entries, period]);
 
@@ -120,6 +145,7 @@ Suggested action: ${suggestion}`;
           </div>
 
           <div style={styles.footer}>{insights.summary.period}</div>
+          <div style={styles.disclaimer}>{insights.disclaimer}</div>
         </div>
       </div>
     </div>
@@ -194,4 +220,13 @@ const styles = {
   emotionBadge: { background: "rgba(107,199,127,0.2)", border: "1px solid rgba(107,199,127,0.4)", padding: "6px 10px", borderRadius: 6, fontSize: 13, color: "#6bcf7f" },
   insightsText: { lineHeight: 1.6, opacity: 0.9, fontSize: 14, whiteSpace: "pre-wrap" },
   footer: { fontSize: 12, opacity: 0.5, textAlign: "center" },
+  disclaimer: {
+    fontSize: 12,
+    opacity: 0.8,
+    padding: "8px 10px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(255,255,255,0.04)",
+    textAlign: "center",
+  },
 };

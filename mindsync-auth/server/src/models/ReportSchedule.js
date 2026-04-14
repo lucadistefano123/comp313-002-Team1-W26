@@ -9,7 +9,7 @@ const ReportScheduleSchema = new mongoose.Schema(
     },
     frequency: {
       type: String,
-      enum: ["daily", "weekly", "monthly"],
+      enum: ["daily", "weekly", "monthly", "quarterly"],
       required: true,
     },
     startDate: {
@@ -23,6 +23,19 @@ const ReportScheduleSchema = new mongoose.Schema(
     lastRun: {
       type: Date,
       default: null,
+    },
+    lastReportStatus: {
+      type: String,
+      enum: ["ready", "empty", "failed"],
+      default: null,
+    },
+    lastReportNotice: {
+      type: String,
+      default: "",
+    },
+    lastReportTotalEntries: {
+      type: Number,
+      default: 0,
     },
     active: {
       type: Boolean,

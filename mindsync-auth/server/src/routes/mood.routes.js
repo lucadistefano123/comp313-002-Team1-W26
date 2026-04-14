@@ -5,6 +5,8 @@ const { validationResult } = require("express-validator");
 const MoodEntry = require("../models/MoodEntry");
 
 const router = express.Router();
+const INSIGHTS_DISCLAIMER = "These insights are descriptive only and are not medical advice.";
+const MIN_ENTRIES_FOR_INSIGHTS = 3;
 
 // Allowed tags (same list you’ll show in UI)
 const ALLOWED_TAGS = [
@@ -228,7 +230,21 @@ router.get(
       if (entries.length === 0) {
         return res.json({ 
           insights: "No mood entries yet. Start logging your mood to get personalized insights!",
-          summary: {}
+          summary: {
+            period: `Last ${days} days`,
+          },
+          disclaimer: INSIGHTS_DISCLAIMER,
+        });
+      }
+
+      if (entries.length < MIN_ENTRIES_FOR_INSIGHTS) {
+        return res.json({
+          insights: `Not enough data yet for a reliable pattern summary. Add at least ${MIN_ENTRIES_FOR_INSIGHTS} entries to improve insight quality.`,
+          summary: {
+            totalEntries: entries.length,
+            period: `Last ${days} days`,
+          },
+          disclaimer: INSIGHTS_DISCLAIMER,
         });
       }
 
@@ -284,6 +300,8 @@ router.get(
         period: `Last ${days} days`
       };
 
+      const hasMixedMoodSignals = ratings.some((r) => r <= 4) && ratings.some((r) => r >= 7);
+
       // Generate AI insights using OpenAI
       const OpenAI = require("openai").default;
       const openai = new OpenAI({
@@ -294,7 +312,7 @@ router.get(
         .map(e => `- ${new Date(e.createdAt).toLocaleDateString()}: Mood ${e.rating}/10 with feelings of ${e.tags.join(", ") || "unspecified"}${e.note ? `. Note: ${e.note}` : ""}`)
         .join("\n");
 
-      const prompt = `You are a compassionate mental health insights assistant. Analyze this person's mood data from the last ${days} days and provide personalized, actionable insights.
+      const prompt = `You are a compassionate wellness insights assistant. Analyze this person's mood data from the last ${days} days and provide non-clinical, descriptive insights only.
 
 MOOD DATA:
 ${entriesDescription}
@@ -305,12 +323,14 @@ KEY PATTERNS:
 - Most common feelings: ${topEmotions.map(e => e.tag).join(", ") || "none logged"}
 - Mood range: ${minRating}-${maxRating}
 ${moodChangeAlert ? `- Alert: ${moodChangeAlert}` : ""}
+${hasMixedMoodSignals ? "- Mixed mood pattern observed: includes both lower and higher mood periods" : ""}
 
 Please provide:
 1. A brief summary of their mood pattern (1-2 sentences)
 2. Two specific observations about their emotional state
 3. One personalized coping suggestion or positive action they could take
 4. An encouraging note
+5. A final line that explicitly says: "These insights are descriptive only and are not medical advice."
 
 Keep the tone warm, empathetic, and supportive. Be specific to their data.`;
 
@@ -327,7 +347,7 @@ Keep the tone warm, empathetic, and supportive. Be specific to their data.`;
 
       const insights = message.choices[0].message.content;
 
-      res.json({ insights, summary });
+      res.json({ insights, summary, disclaimer: INSIGHTS_DISCLAIMER });
 
     } catch (error) {
       console.error("Error generating insights:", error);

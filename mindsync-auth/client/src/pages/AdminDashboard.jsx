@@ -10,6 +10,7 @@ import {
   listReportSchedules,
   createReportSchedule,
   deleteReportSchedule,
+  getScheduleReportPdf,
 } from "../api/adminApi";
 import { getFlags, updateFlag } from "../api/flagsApi";
 import {
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
   const [trendStart, setTrendStart] = useState(dateToInput(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
   const [trendEnd, setTrendEnd] = useState(dateToInput(today));
   const [trendData, setTrendData] = useState([]);
+  const [trendAnonymity, setTrendAnonymity] = useState({ threshold: 0, suppressedDays: 0 });
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState("");
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -77,9 +79,11 @@ export default function AdminDashboard() {
     try {
       const data = await getMoodTrends(start, end);
       setTrendData(data.history || []);
+      setTrendAnonymity(data.anonymity || { threshold: 0, suppressedDays: 0 });
     } catch (e) {
       setTrendError(e?.message || "Failed to load mood trends");
       setTrendData([]);
+      setTrendAnonymity({ threshold: 0, suppressedDays: 0 });
     } finally {
       setTrendLoading(false);
     }
@@ -232,6 +236,22 @@ export default function AdminDashboard() {
     }
   }
 
+  async function downloadSchedulePdf(id) {
+    try {
+      const blob = await getScheduleReportPdf(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `scheduled-report-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      setScheduleErr(e.message);
+    }
+  }
+
   async function exportPdf() {
     try {
       const blob = await getReportPdf(trendStart, trendEnd);
@@ -337,6 +357,11 @@ export default function AdminDashboard() {
           </div>
 
           {trendError && <p style={{ color: "#fca5a5" }}>{trendError}</p>}
+          {!trendError && trendAnonymity.suppressedDays > 0 && (
+            <p style={{ color: "#fcd34d" }}>
+              {trendAnonymity.suppressedDays} day(s) were suppressed to enforce anonymity threshold ({trendAnonymity.threshold}).
+            </p>
+          )}
           {trendLoading ? (
             <p>Loading trend data…</p>
           ) : (
@@ -353,6 +378,9 @@ export default function AdminDashboard() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+          )}
+          {!trendLoading && trendData.every((d) => d.avg === null) && (
+            <p style={{ opacity: 0.72 }}>No aggregated data available for the selected period.</p>
           )}
 
           <h3 style={{ marginTop: 20 }}>System Usage Metrics</h3>
@@ -427,6 +455,7 @@ export default function AdminDashboard() {
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
             </select>
 
             <input
@@ -471,7 +500,10 @@ export default function AdminDashboard() {
                   <div style={{ fontSize: 13, opacity: 0.72 }}>
                     Active: {s.active ? "Yes" : "No"} | Last run: {s.lastRun ? new Date(s.lastRun).toLocaleString() : "Never"}
                   </div>
-                  <button onClick={() => removeSchedule(s._id)} style={{ marginTop: 6 }}>Delete</button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                    <button onClick={() => downloadSchedulePdf(s._id)}>Download PDF</button>
+                    <button onClick={() => removeSchedule(s._id)}>Delete</button>
+                  </div>
                 </div>
               ))
             )}

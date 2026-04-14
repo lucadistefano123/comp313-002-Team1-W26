@@ -38,6 +38,7 @@ export default function MoodHistoryChart({ onExport }) {
   const [compareData, setCompareData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [compareWarning, setCompareWarning] = useState("");
 
   function dateToInputString(date) {
     return date.toISOString().slice(0, 10);
@@ -87,13 +88,22 @@ export default function MoodHistoryChart({ onExport }) {
   const loadHistory = useCallback(async () => {
     setLoading(true);
     setError("");
+    setCompareWarning("");
     try {
       const p = await getMoodHistoryRange(activePrimaryStart, activePrimaryEnd);
-      setPrimaryData(p.history || []);
+      const primaryHistory = p.history || [];
+      setPrimaryData(primaryHistory);
 
       if (compareEnabled) {
         const c = await getMoodHistoryRange(activeCompareStart, activeCompareEnd);
-        setCompareData(c.history || []);
+        const compareHistory = c.history || [];
+        setCompareData(compareHistory);
+
+        const primaryHasData = primaryHistory.some((d) => d.avg !== null);
+        const compareHasData = compareHistory.some((d) => d.avg !== null);
+        if (primaryHasData !== compareHasData) {
+          setCompareWarning("Partial comparison: one selected range has no mood data.");
+        }
       } else {
         setCompareData([]);
       }
@@ -107,6 +117,7 @@ export default function MoodHistoryChart({ onExport }) {
   }, [activePrimaryStart, activePrimaryEnd, activeCompareStart, activeCompareEnd, compareEnabled]);
 
   function applyRanges(primStart, primEnd, compareOn = compareEnabled, compStart = compareStart, compEnd = compareEnd) {
+    setCompareWarning("");
     const primaryError = validateDateRange(primStart, primEnd);
     if (primaryError) {
       setError(primaryError);
@@ -117,6 +128,11 @@ export default function MoodHistoryChart({ onExport }) {
       const compareError = validateDateRange(compStart, compEnd);
       if (compareError) {
         setError(compareError);
+        return;
+      }
+
+      if (primStart === compStart && primEnd === compEnd) {
+        setError("Primary and comparison ranges are identical. Please choose a different comparison range.");
         return;
       }
     }
@@ -271,6 +287,7 @@ export default function MoodHistoryChart({ onExport }) {
         </div>
 
         {error ? <p style={styles.error}>{error}</p> : null}
+        {compareWarning ? <p style={styles.warning}>{compareWarning}</p> : null}
 
         {loading ? (
           <p role="status" style={styles.loading}>Loading mood data...</p>
@@ -410,6 +427,7 @@ const styles = {
   },
   summary: { margin: "10px 0 8px", color: "#e5e7eb", fontSize: 14, opacity: 0.95 },
   error: { color: "#fca5a5", fontSize: 13, marginBottom: 8 },
+  warning: { color: "#fcd34d", fontSize: 13, marginBottom: 8 },
   loading: { color: "rgba(255,255,255,0.7)", fontSize: 14, marginBottom: 8 },
   empty: {
     height: 120,
