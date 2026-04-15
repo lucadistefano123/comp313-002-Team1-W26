@@ -2,7 +2,7 @@ const PDFDocument = require("pdfkit");
 const MoodEntry = require("../models/MoodEntry");
 const ReportSchedule = require("../models/ReportSchedule");
 
-const AGGREGATION_ANONYMITY_THRESHOLD = 5;
+const AGGREGATION_ANONYMITY_THRESHOLD = 3;
 
 function safeDate(value) {
   return value ? new Date(value) : null;
