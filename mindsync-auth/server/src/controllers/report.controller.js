@@ -189,7 +189,7 @@ exports.deleteSchedule = async (req, res) => {
     const schedule = await ReportSchedule.findOne({ _id: id, adminId });
     if (!schedule) return res.status(404).json({ message: "Schedule not found." });
 
-    await schedule.remove();
+    await schedule.deleteOne();
     res.json({ message: "Schedule deleted." });
   } catch (err) {
     console.error("Delete schedule error", err);
